@@ -6,6 +6,7 @@ import { deriveSecret } from "@/lib/crypto";
 import { prisma } from "@/lib/db";
 import { getSetting, getSettingsVersion, isInstalled, type OAuthAppSettings, type SiteSettings } from "@/lib/settings";
 import { INSTALL_COOKIE, readCookie, verifyInstallSession } from "@/install/steps";
+import { onFirstSignIn } from "@/releases/first-sync";
 
 export type { ProviderName } from "@/providers/types";
 import type { ProviderName } from "@/providers/types";
@@ -140,6 +141,8 @@ export function buildAuthOptions(cfg: AuthConfigInput): BetterAuthOptions {
         },
       },
       account: {
+        // A newly connected service: fetch its follows and releases right away.
+        create: { after: async (account) => onFirstSignIn(account.userId) },
         update: {
           // A successful sign-in or refresh stores new tokens: the account works again.
           after: async (account) => {
