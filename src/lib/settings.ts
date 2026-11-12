@@ -29,6 +29,8 @@ export interface InstallSecrets {
   setupToken?: string;
   sessionHash?: string;
   sessionExpiresAt?: string;
+  /** sha256 of the mail settings that last passed "Send test email" */
+  mailTestedHash?: string;
 }
 
 export interface SettingsMap {

@@ -5,6 +5,7 @@ import { genericOAuth } from "better-auth/plugins/generic-oauth";
 import { deriveSecret } from "@/lib/crypto";
 import { prisma } from "@/lib/db";
 import { getSetting, getSettingsVersion, isInstalled, type OAuthAppSettings, type SiteSettings } from "@/lib/settings";
+import { INSTALL_COOKIE, readCookie, verifyInstallSession } from "@/install/steps";
 
 export type ProviderName = "spotify" | "tidal";
 
@@ -24,14 +25,21 @@ export const isPlaceholderEmail = (email: string | null | undefined) =>
   !email || email.endsWith(`@${PLACEHOLDER_EMAIL_DOMAIN}`);
 
 export class SignupsClosedError extends Error {
-  constructor() {
-    super("Sign-ups are closed. Ask the admin to open them.");
+  constructor(message = "Sign-ups are closed. Ask the admin to open them.") {
+    super(message);
     this.name = "SignupsClosedError";
   }
 }
 
-export async function assertSignupAllowed(): Promise<void> {
-  if (!(await isInstalled())) return;
+/**
+ * Before installation only the person holding the installer session (cookie) may create the admin account.
+ * After installation the first user is always allowed; others only when sign-ups are open.
+ */
+export async function assertSignupAllowed(cookieHeader?: string | null): Promise<void> {
+  if (!(await isInstalled())) {
+    if (await verifyInstallSession(readCookie(cookieHeader, INSTALL_COOKIE))) return;
+    throw new SignupsClosedError("Setup is not finished yet. Continue in the installer.");
+  }
   const site = await getSetting("site");
   if (site?.allowSignups) return;
   if ((await prisma.user.count()) === 0) return;
@@ -113,9 +121,9 @@ export function buildAuthOptions(cfg: AuthConfigInput): BetterAuthOptions {
     databaseHooks: {
       user: {
         create: {
-          before: async () => {
+          before: async (_user, ctx) => {
             try {
-              await assertSignupAllowed();
+              await assertSignupAllowed(ctx?.headers?.get("cookie") ?? ctx?.request?.headers.get("cookie"));
             } catch (err) {
               if (err instanceof SignupsClosedError) throw new APIError("FORBIDDEN", { message: err.message });
               throw err;
