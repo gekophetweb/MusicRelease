@@ -60,7 +60,9 @@ test("first sync stores releases and links artists; compilations are skipped", a
     follows: { "tok-u1": [A, B] },
     catalogue: { A: [rel("r1"), rel("r2", { rawType: "album" })], B: [rel("r3", { rawType: "compilation" })] },
   });
-  expect(await syncUser("u1", deps(provider))).toEqual({ newReleases: 2 });
+  const res = await syncUser("u1", deps(provider));
+  const run = await prisma.syncRun.findFirstOrThrow({ where: { userId: "u1" } });
+  expect({ ...res, error: run.error }).toEqual({ newReleases: 2, error: null });
   expect(await prisma.release.count()).toBe(2);
   expect(await prisma.userArtist.count({ where: { userId: "u1" } })).toBe(2);
   const r2 = await prisma.release.findFirstOrThrow({ where: { providerId: "r2" }, include: { artists: { include: { artist: true } } } });

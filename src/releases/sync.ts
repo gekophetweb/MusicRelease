@@ -103,7 +103,7 @@ async function syncArtist(
   return created;
 }
 
-async function syncAccount(userId: string, p: ProviderName, deps: Required<SyncDeps>): Promise<number> {
+async function syncAccount(userId: string, p: ProviderName, deps: Required<SyncDeps>, warnings: string[]): Promise<number> {
   const provider = deps.providerFor(p);
   const token = await deps.tokenFor(userId, p);
   const markReconnect = async (err: unknown): Promise<never> => {
@@ -131,7 +131,11 @@ async function syncAccount(userId: string, p: ProviderName, deps: Required<SyncD
       created += await syncArtist(provider, token, artist, now);
     } catch (err) {
       if (err instanceof ProviderHttpError && err.status === 401) authError = err;
-      else console.warn(`[sync] ${p} artist ${artist.providerId} failed: ${(err as Error).message}`);
+      else {
+        const msg = `${p} artist ${artist.providerId} (${artist.name}): ${(err as Error).message}`;
+        warnings.push(msg);
+        console.warn(`[sync] ${msg}`);
+      }
     }
   });
   if (authError) return markReconnect(authError);
@@ -156,16 +160,17 @@ export async function syncUser(userId: string, deps?: SyncDeps): Promise<{ newRe
   });
   let newReleases = 0;
   const errors: unknown[] = [];
+  const warnings: string[] = [];
   for (const { providerId } of accounts) {
     try {
-      newReleases += await syncAccount(userId, providerId as ProviderName, d);
+      newReleases += await syncAccount(userId, providerId as ProviderName, d, warnings);
     } catch (err) {
       errors.push(err);
     }
   }
   await prisma.syncRun.update({
     where: { id: run.id },
-    data: { finishedAt: new Date(), newReleases, error: errors.length ? errors.map((e) => (e as Error).message).join("; ") : null },
+    data: { finishedAt: new Date(), newReleases, error: [...errors.map((e) => (e as Error).message), ...warnings].join("; ").slice(0, 2000) || null },
   });
   if (errors.length) throw errors[0];
   return { newReleases };
