@@ -1,0 +1,156 @@
+{
+ "data": [
+  {
+   "id": "5001",
+   "type": "albums"
+  },
+  {
+   "id": "5002",
+   "type": "albums"
+  }
+ ],
+ "included": [
+  {
+   "id": "5001",
+   "type": "albums",
+   "attributes": {
+    "title": "Northern Lights",
+    "albumType": "EP",
+    "releaseDate": "2026-11-06",
+    "numberOfItems": 5,
+    "explicit": false,
+    "externalLinks": [
+     {
+      "href": "https://tidal.com/browse/album/5001",
+      "meta": {
+       "type": "TIDAL_SHARING"
+      }
+     }
+    ]
+   },
+   "relationships": {
+    "coverArt": {
+     "data": [
+      {
+       "id": "art-c5001",
+       "type": "artworks"
+      }
+     ]
+    },
+    "artists": {
+     "data": [
+      {
+       "id": "101",
+       "type": "artists"
+      }
+     ]
+    }
+   }
+  },
+  {
+   "id": "5002",
+   "type": "albums",
+   "attributes": {
+    "title": "Collected",
+    "albumType": "ALBUM",
+    "releaseDate": "2024-03-15",
+    "numberOfItems": 11,
+    "explicit": false,
+    "externalLinks": [
+     {
+      "href": "https://tidal.com/browse/album/5002",
+      "meta": {
+       "type": "TIDAL_SHARING"
+      }
+     }
+    ]
+   },
+   "relationships": {
+    "coverArt": {
+     "data": [
+      {
+       "id": "art-c5002",
+       "type": "artworks"
+      }
+     ]
+    },
+    "artists": {
+     "data": [
+      {
+       "id": "101",
+       "type": "artists"
+      },
+      {
+       "id": "102",
+       "type": "artists"
+      }
+     ]
+    }
+   }
+  },
+  {
+   "id": "art-c5001",
+   "type": "artworks",
+   "attributes": {
+    "mediaType": "IMAGE",
+    "files": [
+     {
+      "href": "https://resources.tidal.com/images/c5001/1280x1280.jpg",
+      "meta": {
+       "width": 1280,
+       "height": 1280
+      }
+     },
+     {
+      "href": "https://resources.tidal.com/images/c5001/320x320.jpg",
+      "meta": {
+       "width": 320,
+       "height": 320
+      }
+     },
+     {
+      "href": "https://resources.tidal.com/images/c5001/80x80.jpg",
+      "meta": {
+       "width": 80,
+       "height": 80
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "art-c5002",
+   "type": "artworks",
+   "attributes": {
+    "mediaType": "IMAGE",
+    "files": [
+     {
+      "href": "https://resources.tidal.com/images/c5002/1280x1280.jpg",
+      "meta": {
+       "width": 1280,
+       "height": 1280
+      }
+     },
+     {
+      "href": "https://resources.tidal.com/images/c5002/320x320.jpg",
+      "meta": {
+       "width": 320,
+       "height": 320
+      }
+     },
+     {
+      "href": "https://resources.tidal.com/images/c5002/80x80.jpg",
+      "meta": {
+       "width": 80,
+       "height": 80
+      }
+     }
+    ]
+   }
+  }
+ ],
+ "links": {
+  "self": "/artists/101/relationships/albums",
+  "next": "/artists/101/relationships/albums?page%5Bcursor%5D=p2"
+ }
+}
