@@ -120,6 +120,9 @@ test("unfollow by one user keeps the artist for the other; cleanup removes it wh
   await syncAll(deps(u1Left.provider));
   expect(await prisma.artist.count()).toBe(1);
   expect(await prisma.release.count()).toBe(1);
+  // cleanup only removes rows older than an hour, so age them first
+  await prisma.artist.updateMany({ data: { createdAt: new Date(Date.now() - 2 * 3600_000) } });
+  await prisma.release.updateMany({ data: { firstSeenAt: new Date(Date.now() - 2 * 3600_000) } });
   const nobody = fakeProvider({ follows: {}, catalogue: {} });
   await syncAll(deps(nobody.provider));
   expect(await prisma.artist.count()).toBe(0);
@@ -185,4 +188,65 @@ test("concurrent syncAll runs once", async () => {
   const [a, b] = await Promise.all([syncAll(deps(provider)), syncAll(deps(provider))]);
   expect([a.skipped, b.skipped].sort()).toEqual([false, true]);
   expect(calls.followed.sort()).toEqual(["tok-u1", "tok-u2"]);
+});
+
+// ---- review fixes ----
+
+test("new-release count is right when a slower artist creates nothing (no lost update)", async () => {
+  await userWithSpotify("u1");
+  const { provider } = fakeProvider({
+    follows: { "tok-u1": [A, B] },
+    catalogue: { A: [rel("r1"), rel("r2", { rawType: "album" })], B: [] },
+  });
+  const slowB: MusicProvider = {
+    ...provider,
+    async getArtistReleases(token, artistId, opts) {
+      if (artistId === "B") await new Promise((r) => setTimeout(r, 300));
+      return provider.getArtistReleases(token, artistId, opts);
+    },
+  };
+  expect(await syncUser("u1", deps(slowB))).toEqual({ newReleases: 2 });
+});
+
+test("a collaboration stored earlier is credited to an artist synced later", async () => {
+  await userWithSpotify("u1");
+  await userWithSpotify("u2");
+  const collab = rel("rc", { title: "Together", artistProviderIds: ["A", "B"] });
+  const { provider } = fakeProvider({ follows: { "tok-u1": [A], "tok-u2": [B] }, catalogue: { A: [collab], B: [collab] } });
+  await syncUser("u1", deps(provider));
+  await syncUser("u2", deps(provider));
+  const links = await prisma.releaseArtist.findMany({ include: { artist: true } });
+  expect(links.map((l) => l.artist.providerId).sort()).toEqual(["A", "B"]);
+});
+
+test("a collaboration between two followed artists synced in parallel is stored once without errors", async () => {
+  await userWithSpotify("u1");
+  const collab = rel("rc", { title: "Together", artistProviderIds: ["A", "B"] });
+  const { provider } = fakeProvider({ follows: { "tok-u1": [A, B] }, catalogue: { A: [collab, rel("ra")], B: [collab, rel("rb")] } });
+  await syncUser("u1", deps(provider));
+  const run = await prisma.syncRun.findFirstOrThrow({ where: { userId: "u1" } });
+  expect(run.error).toBeNull();
+  expect(await prisma.release.count()).toBe(3);
+  expect(await prisma.releaseArtist.count({ where: { release: { providerId: "rc" } } })).toBe(2);
+});
+
+test("cleanup leaves artists and releases created moments ago alone", async () => {
+  await prisma.artist.create({ data: { provider: "spotify", providerId: "fresh", name: "Fresh" } });
+  const { provider } = fakeProvider({ follows: {}, catalogue: {} });
+  await syncAll(deps(provider));
+  expect(await prisma.artist.count()).toBe(1);
+});
+
+test("a provider 401 mid-sync gets one fresh token before the account is marked", async () => {
+  await userWithSpotify("u1");
+  let n = 0;
+  const { provider, calls } = fakeProvider({
+    follows: { "tok-u1-1": [A], "tok-u1-2": [A] },
+    catalogue: { A: [rel("r1")] },
+    failFor: (token) => (token === "tok-u1-1" ? new ProviderHttpError(401, "https://api.spotify.com") : undefined),
+  });
+  const res = await syncUser("u1", deps(provider, { tokenFor: async () => `tok-u1-${++n}` }));
+  expect(res).toEqual({ newReleases: 1 });
+  expect(calls.releases).toEqual(["tok-u1-1:A", "tok-u1-2:A"]);
+  expect((await prisma.account.findFirstOrThrow({ where: { userId: "u1" } })).needsReconnect).toBe(false);
 });

@@ -1,0 +1,6 @@
+-- AlterTable
+ALTER TABLE "Artist" ADD COLUMN     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP;
+
+-- AlterTable
+ALTER TABLE "account" ADD COLUMN     "tokenFailedSince" TIMESTAMP(3),
+ADD COLUMN     "tokenFailures" INTEGER NOT NULL DEFAULT 0;

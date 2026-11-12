@@ -10,7 +10,24 @@ function page(title: string, body: string, status = 200): Response {
   return new Response(html, { status, headers: { "content-type": "text/html; charset=utf-8" } });
 }
 
-async function unsubscribe(req: Request): Promise<Response> {
+const escapeAttr = (s: string) => s.replace(/[&"<>]/g, (c) => ({ "&": "&amp;", '"': "&quot;", "<": "&lt;", ">": "&gt;" })[c]!);
+
+/**
+ * GET only shows a confirm button: mail security scanners open links in emails, which must not unsubscribe anyone.
+ * The button (and mail clients' RFC 8058 one-click) POST to the same URL.
+ */
+export async function GET(req: Request): Promise<Response> {
+  const token = new URL(req.url).searchParams.get("token") ?? "";
+  const found = token ? await prisma.userSettings.findUnique({ where: { unsubscribeToken: token }, select: { userId: true } }) : null;
+  if (!found) return page("Link not recognised", "This unsubscribe link is not valid. You can turn the weekly email off under Settings.", 404);
+  return page(
+    "Stop the weekly email?",
+    `You will no longer get the weekly list of new releases. You can turn it back on under <a href="/settings">Settings</a>.</p>
+<form method="post" action="/unsubscribe?token=${escapeAttr(encodeURIComponent(token))}"><button type="submit" style="font:inherit;padding:.5rem 1rem;border-radius:6px;border:0;background:#4a2160;color:#fff;cursor:pointer">Stop the weekly email</button></form><p>`,
+  );
+}
+
+export async function POST(req: Request): Promise<Response> {
   const token = new URL(req.url).searchParams.get("token") ?? "";
   const res = token ? await prisma.userSettings.updateMany({ where: { unsubscribeToken: token }, data: { digestEnabled: false } }) : { count: 0 };
   if (res.count === 0) return page("Link not recognised", "This unsubscribe link is not valid. You can turn the weekly email off under Settings.", 404);
@@ -19,7 +36,3 @@ async function unsubscribe(req: Request): Promise<Response> {
     'You will not get the weekly email any more. You can turn it back on under <a href="/settings">Settings</a>.',
   );
 }
-
-export const GET = unsubscribe;
-/** RFC 8058 one-click unsubscribe from the mail client. */
-export const POST = unsubscribe;

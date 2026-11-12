@@ -26,6 +26,11 @@ test("buildAuthOptions uses the public URL and encrypts OAuth tokens", () => {
   expect(opts.account?.encryptOAuthTokens).toBe(true);
 });
 
+test("no implicit account linking by email; linking only from a signed-in session", () => {
+  const opts = buildAuthOptions({ site, spotify: spotifyOn, tidal: tidalOn });
+  expect(opts.account?.accountLinking).toEqual({ enabled: true, disableImplicitLinking: true, allowDifferentEmails: true });
+});
+
 test("getEnabledProviders lists providers with a client id", async () => {
   await setSetting("spotify", spotifyOn);
   await setSetting("tidal", { ...tidalOn, clientId: "" });

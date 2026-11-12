@@ -67,3 +67,14 @@ test("verify 404 says the domain is unknown", async () => {
     "Mailgun domain mg.example.com was not found in this account/region",
   );
 });
+
+test("403 shows Mailgun's own message (sandbox recipient, domain not allowed)", async () => {
+  server.use(
+    http.post("https://api.eu.mailgun.net/v3/mg.example.com/messages", () =>
+      HttpResponse.json({ message: "Domain mg.example.com is not allowed to send: recipient not authorized" }, { status: 403 }),
+    ),
+  );
+  await expect(createMailgunTransport(settings).send(msg)).rejects.toThrow(
+    "Mailgun refused the request: Domain mg.example.com is not allowed to send: recipient not authorized",
+  );
+});

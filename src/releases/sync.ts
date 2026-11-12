@@ -48,7 +48,7 @@ async function replaceFollows(userId: string, provider: ProviderName, artistIds:
   }
 }
 
-/** Fetches one artist's releases and stores the new ones. Returns how many were created. */
+/** Fetches one artist's releases, stores the new ones and credits the artist on known ones. Returns how many were created. */
 async function syncArtist(
   provider: MusicProvider,
   token: string,
@@ -58,14 +58,15 @@ async function syncArtist(
   const p = provider.name;
   const fetched = await provider.getArtistReleases(token, artist.providerId, artist.lastSyncedAt ? { maxPages: 1 } : {});
   const releases = dedupeReleases(p, fetched);
+  const keyOf = (title: string, type: string, date: Date) => `${normalizeTitle(title)}|${type}|${date.toISOString().slice(0, 10)}`;
 
-  // What this artist already has, to skip new ids for an edition we already store (e.g. a later "Clean" version).
+  // Releases we already store: by id, and this artist's by title/type/date (a later "Clean" edition gets a new id).
   const existing = await prisma.release.findMany({
     where: { OR: [{ provider: p, providerId: { in: releases.map((r) => r.providerId) } }, { artists: { some: { artistId: artist.id } } }] },
-    select: { providerId: true, title: true, type: true, releaseDate: true },
+    select: { id: true, provider: true, providerId: true, title: true, type: true, releaseDate: true },
   });
-  const knownIds = new Set(existing.map((r) => r.providerId));
-  const knownKeys = new Set(existing.map((r) => `${normalizeTitle(r.title)}|${r.type}|${r.releaseDate.toISOString().slice(0, 10)}`));
+  const idByProviderId = new Map(existing.filter((r) => r.provider === p).map((r) => [r.providerId, r.id]));
+  const idByKey = new Map(existing.map((r) => [keyOf(r.title, r.type, r.releaseDate), r.id]));
 
   const linkedIds = [...new Set(releases.flatMap((r) => r.artistProviderIds))];
   const known = await prisma.artist.findMany({ where: { provider: p, providerId: { in: linkedIds } }, select: { id: true, providerId: true } });
@@ -75,48 +76,77 @@ async function syncArtist(
   for (const r of releases) {
     const kind = classifyRelease(p, r.rawType)!;
     const date = parseReleaseDate(r.releaseDate)!;
-    const key = `${normalizeTitle(r.title)}|${kind}|${date.date.toISOString().slice(0, 10)}`;
-    if (knownIds.has(r.providerId) || knownKeys.has(key)) continue;
-    const row = await prisma.release.create({
-      data: {
-        provider: p,
-        providerId: r.providerId,
-        title: r.title,
-        type: kind,
-        releaseDate: date.date,
-        datePrecision: date.precision,
-        coverUrl: r.coverUrl ?? null,
-        url: r.url,
-        totalTracks: r.totalTracks ?? null,
-      },
-    });
-    knownIds.add(r.providerId);
-    knownKeys.add(key);
+    const key = keyOf(r.title, kind, date.date);
+    let releaseId = idByProviderId.get(r.providerId) ?? idByKey.get(key);
+    if (!releaseId) {
+      // createMany + skipDuplicates: a parallel sync may store the same release at the same moment.
+      const res = await prisma.release.createMany({
+        data: [
+          {
+            provider: p,
+            providerId: r.providerId,
+            title: r.title,
+            type: kind,
+            releaseDate: date.date,
+            datePrecision: date.precision,
+            coverUrl: r.coverUrl ?? null,
+            url: r.url,
+            totalTracks: r.totalTracks ?? null,
+          },
+        ],
+        skipDuplicates: true,
+      });
+      created += res.count;
+      releaseId = (await prisma.release.findUniqueOrThrow({
+        where: { provider_providerId: { provider: p, providerId: r.providerId } },
+        select: { id: true },
+      })).id;
+      idByProviderId.set(r.providerId, releaseId);
+      idByKey.set(key, releaseId);
+    }
+    // Credit this artist (and any other known artist on it), also on releases stored earlier by someone else.
     const artistIds = new Set([artist.id, ...r.artistProviderIds.map((id) => artistIdByProviderId.get(id)).filter((x): x is string => !!x)]);
     await prisma.releaseArtist.createMany({
-      data: [...artistIds].map((artistId) => ({ releaseId: row.id, artistId })),
+      data: [...artistIds].map((artistId) => ({ releaseId: releaseId!, artistId })),
       skipDuplicates: true,
     });
-    created++;
   }
   await prisma.artist.update({ where: { id: artist.id }, data: { lastSyncedAt: now } });
   return created;
 }
 
+const isAuthError = (err: unknown) => err instanceof ProviderHttpError && err.status === 401;
+
 async function syncAccount(userId: string, p: ProviderName, deps: Required<SyncDeps>, warnings: string[]): Promise<number> {
   const provider = deps.providerFor(p);
-  const token = await deps.tokenFor(userId, p);
+  let token = await deps.tokenFor(userId, p);
+  let refreshed = false;
   const markReconnect = async (err: unknown): Promise<never> => {
     await prisma.account.updateMany({ where: { userId, providerId: p }, data: { needsReconnect: true } });
     throw new ReconnectRequiredError(userId, p, err);
+  };
+  /** After a 401, get the token once more (it may have expired mid-sync). False when nothing changed. */
+  const refreshToken = async (): Promise<boolean> => {
+    if (refreshed) return false;
+    refreshed = true;
+    const next = await deps.tokenFor(userId, p);
+    const changed = next !== token;
+    token = next;
+    return changed;
   };
 
   let followed: NormalizedArtist[];
   try {
     followed = await provider.getFollowedArtists(token);
   } catch (err) {
-    if (err instanceof ProviderHttpError && err.status === 401) return markReconnect(err);
-    throw err;
+    if (!isAuthError(err)) throw err;
+    if (!(await refreshToken())) return markReconnect(err);
+    try {
+      followed = await provider.getFollowedArtists(token);
+    } catch (err2) {
+      if (isAuthError(err2)) return markReconnect(err2);
+      throw err2;
+    }
   }
   const artists = await upsertArtists(p, followed);
   await replaceFollows(userId, p, artists.map((a) => a.id));
@@ -124,21 +154,27 @@ async function syncAccount(userId: string, p: ProviderName, deps: Required<SyncD
   const now = deps.now();
   const stale = artists.filter((a) => !a.lastSyncedAt || now.getTime() - a.lastSyncedAt.getTime() > FRESH_MS);
   let created = 0;
-  let authError: unknown;
-  await pool(stale, ARTIST_CONCURRENCY, async (artist) => {
-    if (authError) return;
+  const authFailed: typeof stale = [];
+  const runArtist = async (artist: (typeof stale)[number]) => {
     try {
-      created += await syncArtist(provider, token, artist, now);
+      const n = await syncArtist(provider, token, artist, now);
+      created += n;
     } catch (err) {
-      if (err instanceof ProviderHttpError && err.status === 401) authError = err;
+      if (isAuthError(err)) authFailed.push(artist);
       else {
         const msg = `${p} artist ${artist.providerId} (${artist.name}): ${(err as Error).message}`;
         warnings.push(msg);
         console.warn(`[sync] ${msg}`);
       }
     }
-  });
-  if (authError) return markReconnect(authError);
+  };
+  await pool(stale, ARTIST_CONCURRENCY, runArtist);
+  if (authFailed.length) {
+    const retry = authFailed.splice(0);
+    if (!(await refreshToken())) return markReconnect(new Error("401 from provider"));
+    await pool(retry, ARTIST_CONCURRENCY, runArtist);
+    if (authFailed.length) return markReconnect(new Error("401 from provider after a fresh token"));
+  }
   return created;
 }
 
@@ -178,8 +214,10 @@ export async function syncUser(userId: string, deps?: SyncDeps): Promise<{ newRe
 
 /** Deletes artists nobody follows any more (their releases cascade). */
 async function cleanupOrphans(): Promise<void> {
-  await prisma.artist.deleteMany({ where: { followers: { none: {} } } });
-  await prisma.release.deleteMany({ where: { artists: { none: {} } } });
+  // Rows younger than an hour may belong to a sync that is still running (first sync, "Sync now").
+  const before = new Date(Date.now() - 60 * 60 * 1000);
+  await prisma.artist.deleteMany({ where: { followers: { none: {} }, createdAt: { lt: before } } });
+  await prisma.release.deleteMany({ where: { artists: { none: {} }, firstSeenAt: { lt: before } } });
 }
 
 export interface SyncAllResult {

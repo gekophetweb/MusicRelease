@@ -116,8 +116,9 @@ export function buildAuthOptions(cfg: AuthConfigInput): BetterAuthOptions {
       : {},
     account: {
       encryptOAuthTokens: true,
-      // Signing in with Spotify and later with TIDAL links both to the same user when emails match.
-      accountLinking: { enabled: true, trustedProviders: ["spotify", "tidal"] },
+      // A second service is linked only from a signed-in session (linkSocial). No implicit linking by email:
+      // Spotify does not verify emails, so matching on email would let anyone take over an account.
+      accountLinking: { enabled: true, disableImplicitLinking: true, allowDifferentEmails: true },
     },
     user: { additionalFields: { role: { type: "string", defaultValue: "user", input: false } } },
     databaseHooks: {

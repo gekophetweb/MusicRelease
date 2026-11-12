@@ -40,6 +40,7 @@ model Artist {
   name         String
   imageUrl     String?
   lastSyncedAt DateTime?
+  createdAt    DateTime        @default(now())
   followers    UserArtist[]
   releases     ReleaseArtist[]
 
@@ -147,6 +148,9 @@ model Account {
   scope                 String?
   password              String?
   needsReconnect        Boolean   @default(false)
+  /// Consecutive failed token refreshes; needsReconnect is only set after several over 12+ hours
+  tokenFailures         Int       @default(0)
+  tokenFailedSince      DateTime?
   createdAt             DateTime  @default(now())
   updatedAt             DateTime  @updatedAt
 

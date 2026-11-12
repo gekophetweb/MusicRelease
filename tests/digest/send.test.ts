@@ -62,13 +62,15 @@ test("mail not configured skips everyone without throwing", async () => {
   expect(send).not.toHaveBeenCalled();
 });
 
-test("unsubscribe link disables the digest", async () => {
+test("opening the unsubscribe link only asks for confirmation (link scanners prefetch GETs)", async () => {
   const u = await fanWithRelease("fan@example.com");
   const { unsubscribeToken } = await prisma.userSettings.findUniqueOrThrow({ where: { userId: u.id } });
   const res = await unsubscribeGET(new Request(`https://releases.example.com/unsubscribe?token=${unsubscribeToken}`));
   expect(res.status).toBe(200);
-  expect(await res.text()).toContain("You will not get the weekly email any more");
-  expect((await prisma.userSettings.findUniqueOrThrow({ where: { userId: u.id } })).digestEnabled).toBe(false);
+  const html = await res.text();
+  expect(html).toContain('method="post"');
+  expect(html).toContain("Stop the weekly email");
+  expect((await prisma.userSettings.findUniqueOrThrow({ where: { userId: u.id } })).digestEnabled).toBe(true);
 });
 
 test("one-click unsubscribe (POST) works too", async () => {
@@ -76,6 +78,7 @@ test("one-click unsubscribe (POST) works too", async () => {
   const { unsubscribeToken } = await prisma.userSettings.findUniqueOrThrow({ where: { userId: u.id } });
   const res = await unsubscribePOST(new Request(`https://releases.example.com/unsubscribe?token=${unsubscribeToken}`, { method: "POST" }));
   expect(res.status).toBe(200);
+  expect(await res.text()).toContain("You will not get the weekly email any more");
   expect((await prisma.userSettings.findUniqueOrThrow({ where: { userId: u.id } })).digestEnabled).toBe(false);
 });
 
