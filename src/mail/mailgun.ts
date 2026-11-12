@@ -27,8 +27,11 @@ export function createMailgunTransport(s: MailgunSettings): MailTransport {
     } catch (err) {
       throw new MailError("mailgun", `Could not reach Mailgun: ${(err as Error).message}`);
     }
-    if (res.status === 401 || res.status === 403) {
-      throw new MailError("mailgun", "Mailgun API key was rejected", { status: res.status });
+    if (res.status === 401) throw new MailError("mailgun", "Mailgun API key was rejected", { status: 401 });
+    if (res.status === 403) {
+      // e.g. sandbox domain with an unauthorised recipient, or a domain that may not send
+      const detail = await readMessage(res);
+      throw new MailError("mailgun", `Mailgun refused the request: ${detail}`, { status: 403, detail });
     }
     return res;
   }

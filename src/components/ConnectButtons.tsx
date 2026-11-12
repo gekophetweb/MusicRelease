@@ -12,9 +12,11 @@ const STYLE = {
 export function ConnectButtons({
   providers,
   callbackURL,
+  mode = "signin",
 }: {
   providers: Array<"spotify" | "tidal">;
   callbackURL?: string;
+  mode?: "signin" | "link";
 }) {
   const [busy, setBusy] = useState<string | null>(null);
   if (providers.length === 0) {
@@ -29,7 +31,7 @@ export function ConnectButtons({
           disabled={busy !== null}
           onClick={async () => {
             setBusy(p);
-            await connect(p, callbackURL);
+            await connect(p, callbackURL, mode);
           }}
           className={`rounded-full px-6 py-3 font-semibold transition disabled:opacity-60 ${STYLE[p]}`}
         >

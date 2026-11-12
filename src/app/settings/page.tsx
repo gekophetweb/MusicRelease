@@ -12,8 +12,9 @@ export const metadata = { title: "Settings · MusicReleases" };
 
 const NAME = { spotify: "Spotify", tidal: "TIDAL" } as const;
 
-export default async function SettingsPage() {
+export default async function SettingsPage({ searchParams }: { searchParams: Promise<{ error?: string }> }) {
   const user = await requireUser();
+  const { error } = await searchParams;
   const [settings, site, mail, accounts, enabled] = await Promise.all([
     getUserSettings(user.id),
     getSetting("site"),
@@ -52,11 +53,17 @@ export default async function SettingsPage() {
               </li>
             ))}
           </ul>
+          {error === "link" && (
+            <p role="alert" className="rounded-md border border-danger/40 px-4 py-3 text-sm text-danger">
+              Connecting did not finish. If that music account is already used by someone else on this site, sign in with it
+              there instead.
+            </p>
+          )}
           {broken.length > 0 && <ConnectButtons providers={broken} callbackURL="/settings" />}
           {toConnect.length > 0 && (
             <div className="space-y-3">
               <p className="text-sm text-muted">Also follow artists on another service? Connect it to see those releases too.</p>
-              <ConnectButtons providers={toConnect} callbackURL="/settings" />
+              <ConnectButtons providers={toConnect} callbackURL="/settings" mode="link" />
             </div>
           )}
         </section>

@@ -28,7 +28,7 @@ Everything is configured in a web installer on first start. Only three secrets l
 cp .env.example .env
 ```
 
-Fill in `POSTGRES_PASSWORD`, `APP_SECRET` (`openssl rand -base64 48`) and `TUNNEL_TOKEN`, then:
+Fill in `POSTGRES_PASSWORD` (letters and digits only, e.g. `openssl rand -hex 32`; characters such as / @ # % and the dollar sign break the database URL), `APP_SECRET` (`openssl rand -base64 48`) and `TUNNEL_TOKEN`, then:
 
 ```bash
 docker compose up -d --build

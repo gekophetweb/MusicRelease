@@ -20,7 +20,12 @@ function albumsHandler(calls: string[]) {
   return http.get("https://api.spotify.com/v1/artists/ar1/albums", ({ request }) => {
     const url = new URL(request.url);
     calls.push(url.search);
-    return HttpResponse.json(url.searchParams.get("offset") === "50" ? albums2 : albums1);
+    const group = url.searchParams.get("include_groups");
+    const page = url.searchParams.get("offset") === "50" ? albums2 : albums1;
+    // Spotify groups results by type: serve only the matching items, like the real API.
+    const items = page.items.filter((i) => i.album_type === group);
+    const next = page === albums1 && group === "single" ? albums1.next!.replace("album,single", "single") : null;
+    return HttpResponse.json({ ...page, items, next });
   });
 }
 
@@ -44,7 +49,7 @@ test("maps album fields to NormalizedRelease", async () => {
   server.use(albumsHandler(calls));
   const releases = await spotifyProvider.getArtistReleases("t", "ar1");
   expect(releases).toHaveLength(4);
-  expect(releases[1]).toEqual({
+  expect(releases.find((r) => r.providerId === "al2")).toEqual({
     providerId: "al2",
     title: "Long Player",
     rawType: "album",
@@ -54,16 +59,15 @@ test("maps album fields to NormalizedRelease", async () => {
     totalTracks: 12,
     artistProviderIds: ["ar1", "ar7"],
   });
-  expect(releases[3]).toMatchObject({ rawType: "single", releaseDate: "2008-06" });
-  const q = new URLSearchParams(calls[0]);
-  expect(q.get("include_groups")).toBe("album,single");
-  expect(q.get("market")).toBe("from_token");
+  expect(releases.find((r) => r.providerId === "al4")).toMatchObject({ rawType: "single", releaseDate: "2008-06" });
+  expect(new URLSearchParams(calls[0]).get("market")).toBe("from_token");
 });
 
-test("respects maxPages", async () => {
+test("albums and singles are fetched separately so a long album list cannot hide new singles", async () => {
   const calls: string[] = [];
   server.use(albumsHandler(calls));
   const releases = await spotifyProvider.getArtistReleases("t", "ar1", { maxPages: 1 });
-  expect(calls).toHaveLength(1);
-  expect(releases).toHaveLength(3);
+  const groups = calls.map((c) => new URLSearchParams(c).get("include_groups"));
+  expect(groups.sort()).toEqual(["album", "single"]);
+  expect(releases.map((r) => r.providerId).sort()).toEqual(["al1", "al2", "al3"]);
 });
