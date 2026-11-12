@@ -1,0 +1,82 @@
+{
+ "artists": {
+  "href": "https://api.spotify.com/v1/me/following?type=artist&limit=50&after=ar49",
+  "limit": 50,
+  "next": null,
+  "cursors": {
+   "after": null
+  },
+  "total": 53,
+  "items": [
+   {
+    "external_urls": {
+     "spotify": "https://open.spotify.com/artist/ar50"
+    },
+    "followers": {
+     "href": null,
+     "total": 1050
+    },
+    "genres": [],
+    "href": "https://api.spotify.com/v1/artists/ar50",
+    "id": "ar50",
+    "images": [
+     {
+      "height": 640,
+      "url": "https://i.scdn.co/image/ar50",
+      "width": 640
+     }
+    ],
+    "name": "Artist 50",
+    "popularity": 50,
+    "type": "artist",
+    "uri": "spotify:artist:ar50"
+   },
+   {
+    "external_urls": {
+     "spotify": "https://open.spotify.com/artist/ar51"
+    },
+    "followers": {
+     "href": null,
+     "total": 1051
+    },
+    "genres": [],
+    "href": "https://api.spotify.com/v1/artists/ar51",
+    "id": "ar51",
+    "images": [
+     {
+      "height": 640,
+      "url": "https://i.scdn.co/image/ar51",
+      "width": 640
+     }
+    ],
+    "name": "Artist 51",
+    "popularity": 50,
+    "type": "artist",
+    "uri": "spotify:artist:ar51"
+   },
+   {
+    "external_urls": {
+     "spotify": "https://open.spotify.com/artist/ar52"
+    },
+    "followers": {
+     "href": null,
+     "total": 1052
+    },
+    "genres": [],
+    "href": "https://api.spotify.com/v1/artists/ar52",
+    "id": "ar52",
+    "images": [
+     {
+      "height": 640,
+      "url": "https://i.scdn.co/image/ar52",
+      "width": 640
+     }
+    ],
+    "name": "Artist 52",
+    "popularity": 50,
+    "type": "artist",
+    "uri": "spotify:artist:ar52"
+   }
+  ]
+ }
+}

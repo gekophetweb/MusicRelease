@@ -1,0 +1,146 @@
+{
+ "href": "https://api.spotify.com/v1/artists/ar1/albums?include_groups=album,single&limit=50",
+ "limit": 50,
+ "next": "https://api.spotify.com/v1/artists/ar1/albums?include_groups=album,single&limit=50&offset=50",
+ "offset": 0,
+ "previous": null,
+ "total": 52,
+ "items": [
+  {
+   "album_type": "single",
+   "total_tracks": 1,
+   "available_markets": [
+    "NL"
+   ],
+   "external_urls": {
+    "spotify": "https://open.spotify.com/album/al1"
+   },
+   "href": "https://api.spotify.com/v1/albums/al1",
+   "id": "al1",
+   "images": [
+    {
+     "url": "https://i.scdn.co/image/al1-640",
+     "height": 640,
+     "width": 640
+    },
+    {
+     "url": "https://i.scdn.co/image/al1-300",
+     "height": 300,
+     "width": 300
+    }
+   ],
+   "name": "Night Drive",
+   "release_date": "2026-11-07",
+   "release_date_precision": "day",
+   "type": "album",
+   "uri": "spotify:album:al1",
+   "artists": [
+    {
+     "external_urls": {
+      "spotify": ""
+     },
+     "href": "",
+     "id": "ar1",
+     "name": "Artist ar1",
+     "type": "artist",
+     "uri": "spotify:artist:ar1"
+    }
+   ],
+   "album_group": "single"
+  },
+  {
+   "album_type": "album",
+   "total_tracks": 12,
+   "available_markets": [
+    "NL"
+   ],
+   "external_urls": {
+    "spotify": "https://open.spotify.com/album/al2"
+   },
+   "href": "https://api.spotify.com/v1/albums/al2",
+   "id": "al2",
+   "images": [
+    {
+     "url": "https://i.scdn.co/image/al2-640",
+     "height": 640,
+     "width": 640
+    },
+    {
+     "url": "https://i.scdn.co/image/al2-300",
+     "height": 300,
+     "width": 300
+    }
+   ],
+   "name": "Long Player",
+   "release_date": "2026-10-17",
+   "release_date_precision": "day",
+   "type": "album",
+   "uri": "spotify:album:al2",
+   "artists": [
+    {
+     "external_urls": {
+      "spotify": ""
+     },
+     "href": "",
+     "id": "ar1",
+     "name": "Artist ar1",
+     "type": "artist",
+     "uri": "spotify:artist:ar1"
+    },
+    {
+     "external_urls": {
+      "spotify": ""
+     },
+     "href": "",
+     "id": "ar7",
+     "name": "Artist ar7",
+     "type": "artist",
+     "uri": "spotify:artist:ar7"
+    }
+   ],
+   "album_group": "album"
+  },
+  {
+   "album_type": "album",
+   "total_tracks": 10,
+   "available_markets": [
+    "NL"
+   ],
+   "external_urls": {
+    "spotify": "https://open.spotify.com/album/al3"
+   },
+   "href": "https://api.spotify.com/v1/albums/al3",
+   "id": "al3",
+   "images": [
+    {
+     "url": "https://i.scdn.co/image/al3-640",
+     "height": 640,
+     "width": 640
+    },
+    {
+     "url": "https://i.scdn.co/image/al3-300",
+     "height": 300,
+     "width": 300
+    }
+   ],
+   "name": "Early Days",
+   "release_date": "2009",
+   "release_date_precision": "year",
+   "type": "album",
+   "uri": "spotify:album:al3",
+   "artists": [
+    {
+     "external_urls": {
+      "spotify": ""
+     },
+     "href": "",
+     "id": "ar1",
+     "name": "Artist ar1",
+     "type": "artist",
+     "uri": "spotify:artist:ar1"
+    }
+   ],
+   "album_group": "album"
+  }
+ ]
+}

@@ -1,0 +1,52 @@
+{
+ "href": "https://api.spotify.com/v1/artists/ar1/albums?include_groups=album,single&limit=50",
+ "limit": 50,
+ "next": null,
+ "offset": 50,
+ "previous": null,
+ "total": 52,
+ "items": [
+  {
+   "album_type": "single",
+   "total_tracks": 4,
+   "available_markets": [
+    "NL"
+   ],
+   "external_urls": {
+    "spotify": "https://open.spotify.com/album/al4"
+   },
+   "href": "https://api.spotify.com/v1/albums/al4",
+   "id": "al4",
+   "images": [
+    {
+     "url": "https://i.scdn.co/image/al4-640",
+     "height": 640,
+     "width": 640
+    },
+    {
+     "url": "https://i.scdn.co/image/al4-300",
+     "height": 300,
+     "width": 300
+    }
+   ],
+   "name": "Old EP",
+   "release_date": "2008-06",
+   "release_date_precision": "month",
+   "type": "album",
+   "uri": "spotify:album:al4",
+   "artists": [
+    {
+     "external_urls": {
+      "spotify": ""
+     },
+     "href": "",
+     "id": "ar1",
+     "name": "Artist ar1",
+     "type": "artist",
+     "uri": "spotify:artist:ar1"
+    }
+   ],
+   "album_group": "single"
+  }
+ ]
+}
