@@ -1,13 +1,13 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 import { ConnectButtons } from "@/components/ConnectButtons";
 import { MailForm, MusicForm, postJson, ScheduleForm, SiteForm } from "@/components/settings/forms";
 import { Button, Field, Notice, TextInput } from "@/components/ui";
 import type { MailSettings } from "@/mail/types";
 import type { OAuthAppSettings, ScheduleSettings, SiteSettings } from "@/lib/settings";
 
-interface InstallState {
+export interface InstallState {
   authenticated: boolean;
   detectedOrigin?: string;
   redirectUris?: { spotify: string; tidal: string };
@@ -30,23 +30,20 @@ const STEPS = [
   { key: "admin", title: "Your account" },
 ] as const;
 
-export function InstallWizard({ signinError }: { signinError: boolean }) {
-  const [state, setState] = useState<InstallState | null>(null);
-  const [step, setStep] = useState(0);
+const resumeStep = (s: InstallState) =>
+  s.authenticated ? Math.min(Math.max(s.completedStep ?? 1, 1), STEPS.length - 1) : 0;
 
+export function InstallWizard({ initial, signinError }: { initial: InstallState; signinError: boolean }) {
+  const [state, setState] = useState<InstallState>(initial);
+  const [step, setStep] = useState(() => resumeStep(initial));
+
+  /** Reloads the wizard state after a step is saved, then moves to `advanceTo`. */
   const load = useCallback(async (advanceTo?: number) => {
     const s = (await (await fetch("/api/install/state", { cache: "no-store" })).json()) as InstallState;
     setState(s);
-    if (!s.authenticated) setStep(0);
-    else if (advanceTo !== undefined) setStep(advanceTo);
-    else setStep(Math.min(Math.max(s.completedStep ?? 1, 1), STEPS.length - 1));
+    setStep(!s.authenticated ? 0 : (advanceTo ?? resumeStep(s)));
   }, []);
 
-  useEffect(() => {
-    void load();
-  }, [load]);
-
-  if (!state) return <p className="text-muted">Loading…</p>;
   const reached = state.authenticated ? Math.max(state.completedStep ?? 1, 1) : 0;
   const next = () => load(step + 1);
 

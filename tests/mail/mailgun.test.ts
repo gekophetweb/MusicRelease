@@ -3,9 +3,9 @@ import { createMailgunTransport } from "@/mail/mailgun";
 import { MailError } from "@/mail/errors";
 import sendOk from "../fixtures/mailgun/send-ok.json";
 import domainUnverified from "../fixtures/mailgun/domain-unverified.json";
-import { useMsw } from "../helpers/msw";
+import { setupMsw } from "../helpers/msw";
 
-const server = useMsw();
+const server = setupMsw();
 const settings = {
   provider: "mailgun" as const,
   from: { email: "music@mg.example.com", name: "Music" },
