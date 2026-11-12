@@ -25,3 +25,9 @@ export type MailSettings =
   | { provider: "sender"; from: MailAddress; apiToken: string };
 
 export type MailProviderName = MailSettings["provider"];
+
+export interface MailTransport {
+  send(msg: MailMessage): Promise<{ id?: string }>;
+  /** Checks credentials without sending; throws MailError with a readable message. */
+  verify(): Promise<void>;
+}
