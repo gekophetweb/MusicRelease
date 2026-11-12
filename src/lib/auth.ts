@@ -7,7 +7,8 @@ import { prisma } from "@/lib/db";
 import { getSetting, getSettingsVersion, isInstalled, type OAuthAppSettings, type SiteSettings } from "@/lib/settings";
 import { INSTALL_COOKIE, readCookie, verifyInstallSession } from "@/install/steps";
 
-export type ProviderName = "spotify" | "tidal";
+export type { ProviderName } from "@/providers/types";
+import type { ProviderName } from "@/providers/types";
 
 /** TIDAL OAuth 2.1 (Authorization Code + PKCE) and user endpoint. */
 export const TIDAL_OAUTH = {
