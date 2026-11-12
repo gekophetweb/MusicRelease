@@ -1,0 +1,25 @@
+{
+ "data": [
+  {
+   "id": "5003",
+   "type": "albums"
+  }
+ ],
+ "included": [
+  {
+   "id": "5003",
+   "type": "albums",
+   "attributes": {
+    "title": "One Song",
+    "albumType": "SINGLE",
+    "releaseDate": "2020-02-02",
+    "numberOfItems": 1,
+    "externalLinks": []
+   },
+   "relationships": {}
+  }
+ ],
+ "links": {
+  "self": "/artists/101/relationships/albums?page%5Bcursor%5D=p2"
+ }
+}

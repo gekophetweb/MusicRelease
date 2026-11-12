@@ -1,0 +1,12 @@
+{
+ "data": {
+  "id": "me-1",
+  "type": "users",
+  "attributes": {
+   "username": "fan",
+   "country": "DE",
+   "email": "fan@example.test",
+   "emailVerified": true
+  }
+ }
+}

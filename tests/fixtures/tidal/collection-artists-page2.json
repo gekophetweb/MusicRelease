@@ -1,0 +1,23 @@
+{
+ "data": [
+  {
+   "id": "103",
+   "type": "artists",
+   "meta": {
+    "addedAt": "2025-01-03T00:00:00Z"
+   }
+  }
+ ],
+ "included": [
+  {
+   "id": "103",
+   "type": "artists",
+   "attributes": {
+    "name": "Tidal Artist 103"
+   }
+  }
+ ],
+ "links": {
+  "self": "/userCollectionArtists/me/relationships/items?page%5Bcursor%5D=abc"
+ }
+}

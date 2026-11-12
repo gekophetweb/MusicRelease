@@ -1,0 +1,120 @@
+{
+ "data": [
+  {
+   "id": "101",
+   "type": "artists",
+   "meta": {
+    "addedAt": "2025-01-01T00:00:00Z"
+   }
+  },
+  {
+   "id": "102",
+   "type": "artists",
+   "meta": {
+    "addedAt": "2025-01-02T00:00:00Z"
+   }
+  }
+ ],
+ "included": [
+  {
+   "id": "101",
+   "type": "artists",
+   "attributes": {
+    "name": "Tidal Artist 101",
+    "popularity": 0.5
+   },
+   "relationships": {
+    "profileArt": {
+     "data": [
+      {
+       "id": "art-p101",
+       "type": "artworks"
+      }
+     ]
+    }
+   }
+  },
+  {
+   "id": "102",
+   "type": "artists",
+   "attributes": {
+    "name": "Tidal Artist 102",
+    "popularity": 0.5
+   },
+   "relationships": {
+    "profileArt": {
+     "data": [
+      {
+       "id": "art-p102",
+       "type": "artworks"
+      }
+     ]
+    }
+   }
+  },
+  {
+   "id": "art-p101",
+   "type": "artworks",
+   "attributes": {
+    "mediaType": "IMAGE",
+    "files": [
+     {
+      "href": "https://resources.tidal.com/images/p101/1280x1280.jpg",
+      "meta": {
+       "width": 1280,
+       "height": 1280
+      }
+     },
+     {
+      "href": "https://resources.tidal.com/images/p101/320x320.jpg",
+      "meta": {
+       "width": 320,
+       "height": 320
+      }
+     },
+     {
+      "href": "https://resources.tidal.com/images/p101/80x80.jpg",
+      "meta": {
+       "width": 80,
+       "height": 80
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "art-p102",
+   "type": "artworks",
+   "attributes": {
+    "mediaType": "IMAGE",
+    "files": [
+     {
+      "href": "https://resources.tidal.com/images/p102/1280x1280.jpg",
+      "meta": {
+       "width": 1280,
+       "height": 1280
+      }
+     },
+     {
+      "href": "https://resources.tidal.com/images/p102/320x320.jpg",
+      "meta": {
+       "width": 320,
+       "height": 320
+      }
+     },
+     {
+      "href": "https://resources.tidal.com/images/p102/80x80.jpg",
+      "meta": {
+       "width": 80,
+       "height": 80
+      }
+     }
+    ]
+   }
+  }
+ ],
+ "links": {
+  "self": "/userCollectionArtists/me/relationships/items?include=items",
+  "next": "/userCollectionArtists/me/relationships/items?include=items&page%5Bcursor%5D=abc"
+ }
+}
