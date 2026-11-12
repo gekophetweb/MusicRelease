@@ -1,0 +1,99 @@
+generator client {
+  provider     = "prisma-client"
+  output       = "../src/generated/prisma"
+  moduleFormat = "esm"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Provider {
+  spotify
+  tidal
+}
+
+enum ReleaseType {
+  album
+  single
+}
+
+enum DatePrecision {
+  day
+  month
+  year
+}
+
+/// Installer / admin settings. Keys: site, spotify, tidal, mail, schedule, install.
+model AppSetting {
+  key       String   @id
+  /// JSON, or an encrypted envelope when `encrypted` is true
+  value     String
+  encrypted Boolean  @default(false)
+  updatedAt DateTime @updatedAt
+}
+
+model Artist {
+  id           String          @id @default(cuid())
+  provider     Provider
+  providerId   String
+  name         String
+  imageUrl     String?
+  lastSyncedAt DateTime?
+  followers    UserArtist[]
+  releases     ReleaseArtist[]
+
+  @@unique([provider, providerId])
+}
+
+model UserArtist {
+  userId   String
+  artistId String
+  artist   Artist @relation(fields: [artistId], references: [id], onDelete: Cascade)
+
+  @@id([userId, artistId])
+}
+
+model Release {
+  id            String          @id @default(cuid())
+  provider      Provider
+  providerId    String
+  title         String
+  type          ReleaseType
+  releaseDate   DateTime        @db.Date
+  datePrecision DatePrecision
+  coverUrl      String?
+  url           String
+  totalTracks   Int?
+  firstSeenAt   DateTime        @default(now())
+  artists       ReleaseArtist[]
+
+  @@unique([provider, providerId])
+  @@index([releaseDate])
+}
+
+model ReleaseArtist {
+  releaseId String
+  artistId  String
+  release   Release @relation(fields: [releaseId], references: [id], onDelete: Cascade)
+  artist    Artist  @relation(fields: [artistId], references: [id], onDelete: Cascade)
+
+  @@id([releaseId, artistId])
+}
+
+model UserSettings {
+  userId           String    @id
+  digestEmail      String?
+  digestEnabled    Boolean   @default(true)
+  unsubscribeToken String    @unique @default(cuid())
+  lastDigestSentAt DateTime?
+}
+
+model SyncRun {
+  id          String    @id @default(cuid())
+  startedAt   DateTime  @default(now())
+  finishedAt  DateTime?
+  userId      String?
+  newReleases Int       @default(0)
+  error       String?
+}
