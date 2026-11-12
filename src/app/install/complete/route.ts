@@ -1,7 +1,6 @@
 import { clearInstallCookie, hasInstallSession } from "@/install/http";
 import { completeInstall } from "@/install/steps";
 import { getAuth } from "@/lib/auth";
-import { onFirstSignIn } from "@/releases/first-sync";
 
 export const dynamic = "force-dynamic";
 
@@ -13,7 +12,6 @@ export async function GET(req: Request) {
   if (!session) return Response.redirect(new URL("/install?error=signin", url), 303);
 
   await completeInstall(session.user.id);
-  onFirstSignIn(session.user.id);
   return new Response(null, {
     status: 303,
     headers: { location: new URL("/releases?welcome=1", url).toString(), "set-cookie": clearInstallCookie },
