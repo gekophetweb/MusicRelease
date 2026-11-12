@@ -3,9 +3,9 @@ import { MailNotConfiguredError, sendMail, sendTestMail } from "@/mail";
 import { setSetting } from "@/lib/settings";
 import sendOk from "../fixtures/sender/send-ok.json";
 import { resetDb } from "../helpers/db";
-import { useMsw } from "../helpers/msw";
+import { setupMsw } from "../helpers/msw";
 
-const server = useMsw();
+const server = setupMsw();
 beforeEach(resetDb);
 
 const sender = { provider: "sender" as const, from: { email: "music@example.com", name: "Music" }, apiToken: "tok" };

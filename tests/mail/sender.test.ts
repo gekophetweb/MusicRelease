@@ -2,9 +2,9 @@ import { http, HttpResponse } from "msw";
 import { createSenderTransport } from "@/mail/sender";
 import { MailError } from "@/mail/errors";
 import sendOk from "../fixtures/sender/send-ok.json";
-import { useMsw } from "../helpers/msw";
+import { setupMsw } from "../helpers/msw";
 
-const server = useMsw();
+const server = setupMsw();
 const settings = { provider: "sender" as const, from: { email: "music@example.com", name: "Music" }, apiToken: "tok-1" };
 const msg = { to: { email: "fan@example.com", name: "Fan" }, subject: "Hi", html: "<b>Hi</b>", text: "Hi", headers: { "List-Unsubscribe": "<u>" } };
 

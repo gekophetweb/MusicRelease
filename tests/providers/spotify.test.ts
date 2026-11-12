@@ -4,9 +4,9 @@ import following1 from "../fixtures/spotify/following-page1.json";
 import following2 from "../fixtures/spotify/following-page2.json";
 import albums1 from "../fixtures/spotify/artist-albums.json";
 import albums2 from "../fixtures/spotify/artist-albums-page2.json";
-import { useMsw } from "../helpers/msw";
+import { setupMsw } from "../helpers/msw";
 
-const server = useMsw();
+const server = setupMsw();
 
 function followingHandler(seen?: string[]) {
   return http.get("https://api.spotify.com/v1/me/following", ({ request }) => {

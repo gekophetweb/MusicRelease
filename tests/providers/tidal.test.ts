@@ -7,9 +7,9 @@ import col2 from "../fixtures/tidal/collection-artists-page2.json";
 import alb1 from "../fixtures/tidal/artist-albums.json";
 import alb2 from "../fixtures/tidal/artist-albums-page2.json";
 import me from "../fixtures/tidal/users-me.json";
-import { useMsw } from "../helpers/msw";
+import { setupMsw } from "../helpers/msw";
 
-const server = useMsw();
+const server = setupMsw();
 const API = "https://openapi.tidal.com/v2";
 beforeEach(() => resetTidalCountryCache());
 

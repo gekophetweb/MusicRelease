@@ -1,8 +1,8 @@
 import { http, HttpResponse } from "msw";
 import { fetchWithRetry, ProviderHttpError } from "@/providers/http";
-import { useMsw } from "../helpers/msw";
+import { setupMsw } from "../helpers/msw";
 
-const server = useMsw();
+const server = setupMsw();
 const URL = "https://api.example.test/thing";
 
 afterEach(() => vi.useRealTimers());
