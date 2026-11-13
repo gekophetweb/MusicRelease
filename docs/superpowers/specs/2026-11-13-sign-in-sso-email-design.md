@@ -1,6 +1,6 @@
 # Sign in with Google or an email code; streaming services become connections
 
-Status: awaiting approval · 2026-11-13
+Status: approved, implemented · 2026-11-13
 
 ## Intent
 
