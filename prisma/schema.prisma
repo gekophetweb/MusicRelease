@@ -114,6 +114,7 @@ model User {
   sessions      Session[]
   accounts      Account[]
   suggestions   Suggestion[]
+  suggestionReplies SuggestionReply[]
 
   @@map("user")
 }
@@ -173,16 +174,36 @@ model Verification {
 
 /// An idea or problem a signed-in user sent to the admin (suggestion box).
 model Suggestion {
-  id        String    @id @default(cuid())
-  userId    String
-  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  kind      String // "idea" | "problem"
-  message   String
-  page      String?
-  status    String    @default("open") // "open" | "done"
-  createdAt DateTime  @default(now())
-  doneAt    DateTime?
+  id            String            @id @default(cuid())
+  userId        String
+  user          User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  kind          String // "idea" | "problem"
+  message       String
+  page          String?
+  status        String            @default("new") // "new" | "planned" | "in_progress" | "done" | "wont_do"
+  createdAt     DateTime          @default(now())
+  /// When it was set to done / won't do (null while open)
+  closedAt      DateTime?
+  /// The admin has something new to look at (a new suggestion or a reply from the sender)
+  awaitingAdmin Boolean           @default(true)
+  /// The sender has something new to look at (an admin reply or a status change)
+  awaitingUser  Boolean           @default(false)
+  replies       SuggestionReply[]
 
   @@index([status, createdAt])
   @@index([userId, createdAt])
+}
+
+/// A message in a suggestion's conversation, by the sender or an admin.
+model SuggestionReply {
+  id           String     @id @default(cuid())
+  suggestionId String
+  suggestion   Suggestion @relation(fields: [suggestionId], references: [id], onDelete: Cascade)
+  authorId     String
+  author       User       @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  message      String
+  createdAt    DateTime   @default(now())
+
+  @@index([suggestionId, createdAt])
+  @@index([authorId, createdAt])
 }

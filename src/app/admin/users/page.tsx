@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { listUsers, type AdminUserRow } from "@/admin/users";
 import { requireAdmin } from "@/lib/session";
 import { getSignInMethods } from "@/lib/signin";
@@ -32,19 +31,8 @@ export default async function AdminUsersPage() {
   const noEmail = users.filter((u) => u.email === null);
   const rest = users.filter((u) => u.email !== null);
   return (
-    <main className="mx-auto max-w-4xl space-y-10 px-4 py-12">
+    <main className="mx-auto max-w-4xl space-y-10 px-4 py-10">
       <div className="space-y-3">
-        <nav className="flex gap-4 text-sm text-muted">
-          <Link href="/releases" className="hover:text-ink">
-            Back to releases
-          </Link>
-          <Link href="/admin/settings" className="hover:text-ink">
-            Admin settings
-          </Link>
-          <Link href="/admin/suggestions" className="hover:text-ink">
-            Suggestions
-          </Link>
-        </nav>
         <h1 className="font-display text-4xl font-bold tracking-tight">Users</h1>
         <p className="max-w-prose text-sm text-muted">
           People sign in with Google or a code sent to the email below. Changing an email takes effect on their next sign-in.

@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import { Button, Field } from "@/components/ui";
 import { sendSuggestion, type SuggestionState } from "./actions";
 
@@ -9,15 +9,21 @@ const KINDS = [
   { value: "problem", label: "Problem", hint: "Something that doesn't work or is confusing" },
 ] as const;
 
+/** "Send another" remounts the form with fresh state, keeping the page the user came from. */
 export function SuggestionForm({ page }: { page: string | null }) {
+  const [round, setRound] = useState(0);
+  return <SuggestionFormRound key={round} page={page} onAnother={() => setRound(round + 1)} />;
+}
+
+function SuggestionFormRound({ page, onAnother }: { page: string | null; onAnother: () => void }) {
   const [state, action, pending] = useActionState<SuggestionState, FormData>(sendSuggestion, {});
   if (state.ok) {
     return (
       <div role="status" className="space-y-3 rounded-lg border border-ok/40 px-5 py-4">
-        <p className="text-ok">Thanks! The admin will read this.</p>
-        <a href="/suggestions" className="text-sm text-plum underline underline-offset-2">
+        <p className="text-ok">Thanks! The admin will read this. You can follow it under My suggestions.</p>
+        <Button type="button" variant="quiet" className="px-0" onClick={onAnother}>
           Send another
-        </a>
+        </Button>
       </div>
     );
   }

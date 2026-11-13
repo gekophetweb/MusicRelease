@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { SignOutButton } from "@/components/SignOutButton";
-import { countOpenSuggestions } from "@/suggestions/suggestions";
+import { countAdminAttention, countUnreadForUser } from "@/suggestions/suggestions";
 
 type Current = "releases" | "artists" | "settings" | "suggestions" | "admin";
 
@@ -13,8 +13,22 @@ const FROM: Record<Current, string> = {
   admin: "/admin/settings",
 };
 
-export async function AppHeader({ siteName, isAdmin, current }: { siteName: string; isAdmin: boolean; current: Current }) {
-  const openSuggestions = isAdmin ? await countOpenSuggestions() : 0;
+export async function AppHeader({
+  siteName,
+  isAdmin,
+  userId,
+  current,
+}: {
+  siteName: string;
+  isAdmin: boolean;
+  /** Shows a badge on Suggestions when the admin replied or changed a status the user hasn't seen. */
+  userId?: string;
+  current: Current;
+}) {
+  const [openSuggestions, unread] = await Promise.all([
+    isAdmin ? countAdminAttention() : Promise.resolve(0),
+    userId ? countUnreadForUser(userId) : Promise.resolve(0),
+  ]);
   const link = (href: string, label: string, key: typeof current) => (
     <Link
       href={href}
@@ -34,7 +48,14 @@ export async function AppHeader({ siteName, isAdmin, current }: { siteName: stri
           {link("/releases", "Releases", "releases")}
           {link("/artists", "Artists", "artists")}
           {link("/settings", "Settings", "settings")}
-          {link(current === "suggestions" ? "/suggestions" : `/suggestions?from=${encodeURIComponent(FROM[current])}`, "Suggestions", "suggestions")}
+          <span className="inline-flex items-center gap-1.5">
+            {link(current === "suggestions" ? "/suggestions" : `/suggestions?from=${encodeURIComponent(FROM[current])}`, "Suggestions", "suggestions")}
+            {unread > 0 && (
+              <span className="rounded-full bg-marigold px-1.5 text-xs font-bold leading-5 text-[#241631]" aria-label={`${unread} new repl${unread === 1 ? "y" : "ies"}`}>
+                {unread}
+              </span>
+            )}
+          </span>
           {isAdmin && (
             <span className="inline-flex items-center gap-1.5">
               {link("/admin/settings", "Admin", "admin")}
