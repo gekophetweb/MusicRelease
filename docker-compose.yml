@@ -47,6 +47,8 @@ services:
   # Daily release sync + weekly email digest (schedules are set in the installer / admin settings).
   worker:
     image: music-releases:latest
+    # Built locally by the "app" service; never try to pull it from Docker Hub.
+    pull_policy: never
     restart: unless-stopped
     command: ["node", "dist/worker.mjs"]
     environment:

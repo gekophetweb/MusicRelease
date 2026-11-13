@@ -1,6 +1,6 @@
 # MusicReleases
 
-A self-hosted site that shows the newest albums and singles from the artists you follow on **Spotify** or **TIDAL**, newest first, with albums and singles kept apart. A worker checks for new releases every day and sends a weekly email (through Sender, Mailgun or your own SMTP server).
+A self-hosted site that shows the newest albums and singles from the artists you follow on **Spotify** or **TIDAL**, newest first, with albums and singles kept apart. A worker checks for new releases every day and sends a weekly email (through Resend, Mailgun or your own SMTP server).
 
 Everything is configured in a web installer on first start. Only three secrets live in `.env`.
 
@@ -49,7 +49,7 @@ Open `https://releases.<your-domain>` from anywhere; it sends you to the install
 3. **Music services**: Spotify and/or TIDAL client ID and secret. The installer shows the exact redirect URIs to paste into the developer dashboards:
    - Spotify: `https://releases.<your-domain>/api/auth/callback/spotify`
    - TIDAL: `https://releases.<your-domain>/api/auth/callback/tidal`
-4. **Mail**: Sender, Mailgun or custom SMTP. "Send test email" must succeed before you can continue (or choose "Set up mail later").
+4. **Mail**: Resend, Mailgun or custom SMTP. "Send test email" must succeed before you can continue (or choose "Set up mail later").
 5. **Schedule**: daily sync time, weekly email day/time and timezone (defaults: 06:00 daily, Friday 18:00).
 6. **Your account**: connect Spotify or TIDAL. That account becomes the admin and the installer is locked for good (`/install` returns 404).
 
@@ -63,7 +63,7 @@ All of this can be changed later under **Admin → Settings**.
 
 ## Mail providers
 
-- **Sender** (sender.net): API token from Settings → API access tokens. The from address must be a verified sender.
+- **Resend** (resend.com): API key from API Keys (a "Sending access" key is enough). The from address's domain must be verified under Domains; with a "Full access" key the test email also checks that for you.
 - **Mailgun**: sending domain, API key and region (EU or US). The domain must be verified in Mailgun.
 - **Custom SMTP**: host, port, encryption (STARTTLS 587 / TLS 465 / none) and optional username and password.
 

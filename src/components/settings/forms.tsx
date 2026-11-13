@@ -202,7 +202,7 @@ export function MusicForm({
 // ---------------- Mail ----------------
 
 const MAIL_DEFAULTS: Record<MailSettings["provider"], MailSettings> = {
-  sender: { provider: "sender", from: { email: "", name: "MusicReleases" }, apiToken: "" },
+  resend: { provider: "resend", from: { email: "", name: "MusicReleases" }, apiKey: "" },
   mailgun: { provider: "mailgun", from: { email: "", name: "MusicReleases" }, domain: "", apiKey: "", region: "eu" },
   smtp: { provider: "smtp", from: { email: "", name: "MusicReleases" }, host: "", port: 587, security: "starttls", user: "", pass: "" },
 };
@@ -238,7 +238,7 @@ export function MailForm({
   onSaved?: () => void;
   defaultTestRecipient?: string;
 }) {
-  const [v, setV] = useState<MailSettings>(initial ?? MAIL_DEFAULTS.sender);
+  const [v, setV] = useState<MailSettings>(initial && initial.provider in MAIL_DEFAULTS ? initial : MAIL_DEFAULTS.resend);
   const [skip, setSkip] = useState(false);
   const [to, setTo] = useState(defaultTestRecipient ?? "");
   const [tested, setTested] = useState<string | null>(initial ? JSON.stringify(initial) : null);
@@ -290,7 +290,7 @@ export function MailForm({
                 setV({ ...MAIL_DEFAULTS[p], from: v.from } as MailSettings);
               }}
             >
-              <option value="sender">Sender</option>
+              <option value="resend">Resend</option>
               <option value="mailgun">Mailgun</option>
               <option value="smtp">Custom SMTP server</option>
             </Select>
@@ -311,14 +311,14 @@ export function MailForm({
             </Field>
           </div>
 
-          {v.provider === "sender" && (
+          {v.provider === "resend" && (
             <Field
-              label="Sender API token"
-              htmlFor="mail-sender-token"
-              error={e("apiToken")}
-              hint="Create one in Sender under Settings → API access tokens. The from email must be a verified sender there."
+              label="Resend API key"
+              htmlFor="mail-resend-key"
+              error={e("apiKey")}
+              hint="Create one in Resend under API Keys. The from email's domain must be verified under Domains."
             >
-              <SecretInput id="mail-sender-token" value={v.apiToken} onChange={(apiToken) => set({ apiToken })} />
+              <SecretInput id="mail-resend-key" value={v.apiKey} onChange={(apiKey) => set({ apiKey })} />
             </Field>
           )}
 

@@ -2,7 +2,7 @@ import { z } from "zod";
 import { getSetting } from "@/lib/settings";
 import { MailError, MailNotConfiguredError } from "@/mail/errors";
 import { createMailgunTransport } from "@/mail/mailgun";
-import { createSenderTransport } from "@/mail/sender";
+import { createResendTransport } from "@/mail/resend";
 import { createSmtpTransport } from "@/mail/smtp";
 import type { MailMessage, MailSettings, MailTransport } from "@/mail/types";
 
@@ -29,9 +29,9 @@ export const MailSettingsSchema = z.discriminatedUnion("provider", [
     region: z.enum(["us", "eu"]),
   }),
   z.object({
-    provider: z.literal("sender"),
+    provider: z.literal("resend"),
     from,
-    apiToken: z.string().trim().min(1, "Sender API token is required"),
+    apiKey: z.string().trim().min(1, "Resend API key is required"),
   }),
 ]) satisfies z.ZodType<MailSettings>;
 
@@ -41,15 +41,17 @@ export function createTransport(s: MailSettings): MailTransport {
       return createSmtpTransport(s);
     case "mailgun":
       return createMailgunTransport(s);
-    case "sender":
-      return createSenderTransport(s);
+    case "resend":
+      return createResendTransport(s);
   }
 }
 
 export async function sendMail(msg: MailMessage): Promise<{ id?: string }> {
-  const settings = await getSetting("mail");
-  if (!settings) throw new MailNotConfiguredError();
-  return createTransport(settings).send(msg);
+  const stored = await getSetting("mail");
+  // Settings saved for a provider that no longer exists (e.g. the old Sender integration) count as not configured.
+  const parsed = MailSettingsSchema.safeParse(stored);
+  if (!parsed.success) throw new MailNotConfiguredError();
+  return createTransport(parsed.data).send(msg);
 }
 
 export async function sendTestMail(s: MailSettings, to: string): Promise<void> {

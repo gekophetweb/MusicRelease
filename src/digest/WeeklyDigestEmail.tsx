@@ -1,4 +1,4 @@
-import { Body, Column, Container, Head, Heading, Hr, Html, Img, Link, Preview, Row, Section, Text } from "@react-email/components";
+import { Body, Column, Container, Head, Heading, Hr, Html, Img, Link, Preview, Row, Section, Text } from "react-email";
 import type { ReleaseView } from "@/releases/queries";
 
 const C = { paper: "#f6f5f8", ink: "#241631", muted: "#6b5e78", plum: "#4a2160", marigold: "#f2b134", line: "#e3dde9" };

@@ -22,7 +22,7 @@ export type MailSettings =
       pass?: string;
     }
   | { provider: "mailgun"; from: MailAddress; domain: string; apiKey: string; region: "us" | "eu" }
-  | { provider: "sender"; from: MailAddress; apiToken: string };
+  | { provider: "resend"; from: MailAddress; apiKey: string };
 
 export type MailProviderName = MailSettings["provider"];
 
