@@ -9,7 +9,7 @@ test("accepts a valid shape for each provider", () => {
   expect(
     MailSettingsSchema.safeParse({ provider: "mailgun", from, domain: "mg.example.com", apiKey: "key", region: "eu" }).success,
   ).toBe(true);
-  expect(MailSettingsSchema.safeParse({ provider: "sender", from, apiToken: "tok" }).success).toBe(true);
+  expect(MailSettingsSchema.safeParse({ provider: "resend", from, apiKey: "re_123" }).success).toBe(true);
 });
 
 test("rejects smtp without host", () => {
@@ -18,7 +18,7 @@ test("rejects smtp without host", () => {
 
 test("rejects a bad from email", () => {
   expect(
-    MailSettingsSchema.safeParse({ provider: "sender", from: { email: "not-an-email" }, apiToken: "tok" }).success,
+    MailSettingsSchema.safeParse({ provider: "resend", from: { email: "not-an-email" }, apiKey: "re_123" }).success,
   ).toBe(false);
 });
 

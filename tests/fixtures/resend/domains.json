@@ -1,0 +1,8 @@
+{
+  "object": "list",
+  "has_more": false,
+  "data": [
+    { "id": "d91cd9bd-1176-453e-8fc1-35364d380206", "name": "example.com", "status": "verified", "region": "eu-west-1" },
+    { "id": "e1b2c3d4-0000-4000-8000-000000000000", "name": "pending.example", "status": "pending", "region": "eu-west-1" }
+  ]
+}

@@ -169,31 +169,31 @@ test("during install a sign-up needs the installer session cookie", async () => 
 });
 
 test("admin mail change needs a passing test first", async () => {
-  await setSetting("mail", { provider: "sender", from: { email: "m@example.com" }, apiToken: "real-token" });
+  await setSetting("mail", { provider: "resend", from: { email: "m@example.com" }, apiKey: "real-token" });
   const res = await updateAdminSettings("mail", {
     skip: false,
-    settings: { provider: "sender", from: { email: "new@example.com" }, apiToken: SECRET_MASK },
+    settings: { provider: "resend", from: { email: "new@example.com" }, apiKey: SECRET_MASK },
   });
   expect(res.ok).toBe(false);
 });
 
 test("admin update keeps a secret when the mask is submitted", async () => {
-  await setSetting("mail", { provider: "sender", from: { email: "m@example.com" }, apiToken: "real-token" });
-  await markMailTested({ provider: "sender", from: { email: "new@example.com" }, apiToken: "real-token" });
+  await setSetting("mail", { provider: "resend", from: { email: "m@example.com" }, apiKey: "real-token" });
+  await markMailTested({ provider: "resend", from: { email: "new@example.com" }, apiKey: "real-token" });
   const res = await updateAdminSettings("mail", {
     skip: false,
-    settings: { provider: "sender", from: { email: "new@example.com" }, apiToken: SECRET_MASK },
+    settings: { provider: "resend", from: { email: "new@example.com" }, apiKey: SECRET_MASK },
   });
   expect(res).toEqual({ ok: true });
-  expect(await getSetting("mail")).toEqual({ provider: "sender", from: { email: "new@example.com" }, apiToken: "real-token" });
+  expect(await getSetting("mail")).toEqual({ provider: "resend", from: { email: "new@example.com" }, apiKey: "real-token" });
 });
 
 test("admin mail update does not require a new test when only the mask is sent back", async () => {
-  await setSetting("mail", { provider: "sender", from: { email: "m@example.com" }, apiToken: "real-token" });
-  await markMailTested({ provider: "sender", from: { email: "m@example.com" }, apiToken: "real-token" });
+  await setSetting("mail", { provider: "resend", from: { email: "m@example.com" }, apiKey: "real-token" });
+  await markMailTested({ provider: "resend", from: { email: "m@example.com" }, apiKey: "real-token" });
   const res = await updateAdminSettings("mail", {
     skip: false,
-    settings: { provider: "sender", from: { email: "m@example.com" }, apiToken: SECRET_MASK },
+    settings: { provider: "resend", from: { email: "m@example.com" }, apiKey: SECRET_MASK },
   });
   expect(res).toEqual({ ok: true });
 });
