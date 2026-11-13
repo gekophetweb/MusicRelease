@@ -44,7 +44,7 @@ function timeAgo(d: Date): string {
 export default async function ReleasesPage({ searchParams }: { searchParams: Promise<{ since?: string; welcome?: string; artist?: string }> }) {
   const user = await requireUser();
   const params = await searchParams;
-  const period = PERIODS.find((p) => p.key === params.since) ?? PERIODS[1];
+  const period = PERIODS.find((p) => p.key === params.since) ?? PERIODS[0];
   const artistId = params.artist || undefined;
 
   const [{ albums, singles }, site, mail, accounts, lastRun, followed] = await Promise.all([

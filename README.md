@@ -57,13 +57,13 @@ All of this can be changed later under **Admin → Settings**.
 
 ## Music service apps
 
-**Spotify** — https://developer.spotify.com/dashboard → Create app → Web API. Add the redirect URI above. While the app is in *Development Mode*, only users you add under **User Management** (by their Spotify email) can connect; that is fine for personal or family use.
+**Spotify** — needs a **Spotify Premium** account: since February 2026 Spotify only runs *Development Mode* apps while the app owner has Premium (if it lapses, sign-in and syncing stop until you resubscribe). https://developer.spotify.com/dashboard → Create app → Web API. Add the redirect URI above. In Development Mode up to **5 users** can connect, each added under **User Management** by their Spotify email; that is fine for personal or family use.
 
-**TIDAL** — https://developer.tidal.com/dashboard → create an app, add the redirect URI above, and enable the `user.read` and `collection.read` scopes.
+**TIDAL** — sign in to https://developer.tidal.com/dashboard with your TIDAL account → create an app, add the redirect URI above, and enable the `user.read` and `collection.read` scopes.
 
 ## Mail providers
 
-- **Resend** (resend.com): API key from API Keys (a "Sending access" key is enough). The from address's domain must be verified under Domains; with a "Full access" key the test email also checks that for you.
+- **Resend** (resend.com, the free plan is enough): API key from API Keys (a "Sending access" key is enough). The from address's domain must be verified under Domains; with a "Full access" key the test email also checks that for you.
 - **Mailgun**: sending domain, API key and region (EU or US). The domain must be verified in Mailgun.
 - **Custom SMTP**: host, port, encryption (STARTTLS 587 / TLS 465 / none) and optional username and password.
 

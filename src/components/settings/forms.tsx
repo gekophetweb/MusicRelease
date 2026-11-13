@@ -132,12 +132,15 @@ const SERVICES = {
   spotify: {
     name: "Spotify",
     dashboard: "https://developer.spotify.com/dashboard",
-    steps: "Create an app, choose Web API, and paste the redirect URI below. In Development Mode, add each listener's Spotify email under User Management.",
+    account:
+      "A Spotify Premium account. Since February 2026 Spotify only runs Development Mode apps while the app owner has Premium; if it lapses, sign-in and syncing stop until you resubscribe.",
+    steps: "Create an app, choose Web API, and paste the redirect URI below. In Development Mode the app allows up to 5 listeners: add each one's Spotify email under User Management.",
     permissionsHint: "Nothing to tick in the dashboard: Spotify asks each listener to approve these when they sign in.",
   },
   tidal: {
     name: "TIDAL",
     dashboard: "https://developer.tidal.com/dashboard",
+    account: "A TIDAL account to sign in to the developer dashboard.",
     steps: "Create an app and add the redirect URI below.",
     permissionsHint: "Enable these scopes in your app's settings in the TIDAL dashboard, otherwise sign-in fails.",
   },
@@ -170,6 +173,9 @@ export function MusicForm({
             <Toggle id={`${key}-enabled`} checked={s.enabled} onChange={(enabled) => set({ enabled })} label={`Use ${meta.name}`} />
             {s.enabled && (
               <div className="space-y-4">
+                <p className="text-sm">
+                  <span className="font-medium">Account needed:</span> <span className="text-muted">{meta.account}</span>
+                </p>
                 <p className="text-sm text-muted">
                   Open the{" "}
                   <a href={meta.dashboard} target="_blank" rel="noreferrer" className="text-plum underline underline-offset-2">
@@ -333,7 +339,7 @@ export function MailForm({
               label="Resend API key"
               htmlFor="mail-resend-key"
               error={e("apiKey")}
-              hint="Create one in Resend under API Keys. The from email's domain must be verified under Domains."
+              hint="Needs a Resend account (the free plan is enough). Create a key under API Keys; the from email's domain must be verified under Domains."
             >
               <SecretInput id="mail-resend-key" value={v.apiKey} onChange={(apiKey) => set({ apiKey })} />
             </Field>
@@ -352,7 +358,12 @@ export function MailForm({
                   </Select>
                 </Field>
               </div>
-              <Field label="Mailgun API key" htmlFor="mail-mg-key" error={e("apiKey")}>
+              <Field
+                label="Mailgun API key"
+                htmlFor="mail-mg-key"
+                error={e("apiKey")}
+                hint="Needs a Mailgun account with the sending domain above added and verified."
+              >
                 <SecretInput id="mail-mg-key" value={v.apiKey} onChange={(apiKey) => set({ apiKey })} />
               </Field>
             </>
