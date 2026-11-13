@@ -68,6 +68,10 @@ People sign in to MusicReleases with **Google** or a **code sent to their email*
 
 **Existing users** (from before sign-in moved to Google/email) sign in with a code to the email their account already has; their followed artists and settings stay. Google works for them after that first code sign-in. Accounts whose email was never verified must reconnect Spotify/TIDAL once after that first sign-in. Accounts without a real email (TIDAL often hides it) can't receive a code: set one for them under **Admin → Users**.
 
+## Suggestions
+
+Signed-in people can send an **idea** or a **problem** from the *Suggestions* link in the header. They appear on **Admin → Suggestions** (an open count shows next to *Admin*), where you mark them done. When mail works, every admin also gets a short email per new suggestion; if mail fails, the suggestion is still saved. Each person can send at most 10 per hour.
+
 ## Music service apps
 
 **Spotify** — needs a **Spotify Premium** account: since February 2026 Spotify only runs *Development Mode* apps while the app owner has Premium (if it lapses, sign-in and syncing stop until you resubscribe). https://developer.spotify.com/dashboard → Create app → Web API. Add the redirect URI above. In Development Mode up to **5 users** can connect, each added under **User Management** by their Spotify email; that is fine for personal or family use.

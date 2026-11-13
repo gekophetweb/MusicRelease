@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { SignOutButton } from "@/components/SignOutButton";
+import { countOpenSuggestions } from "@/suggestions/suggestions";
 
 type Current = "releases" | "artists" | "settings" | "suggestions" | "admin";
 
@@ -12,7 +13,8 @@ const FROM: Record<Current, string> = {
   admin: "/admin/settings",
 };
 
-export function AppHeader({ siteName, isAdmin, current }: { siteName: string; isAdmin: boolean; current: Current }) {
+export async function AppHeader({ siteName, isAdmin, current }: { siteName: string; isAdmin: boolean; current: Current }) {
+  const openSuggestions = isAdmin ? await countOpenSuggestions() : 0;
   const link = (href: string, label: string, key: typeof current) => (
     <Link
       href={href}
@@ -33,7 +35,20 @@ export function AppHeader({ siteName, isAdmin, current }: { siteName: string; is
           {link("/artists", "Artists", "artists")}
           {link("/settings", "Settings", "settings")}
           {link(current === "suggestions" ? "/suggestions" : `/suggestions?from=${encodeURIComponent(FROM[current])}`, "Suggestions", "suggestions")}
-          {isAdmin && link("/admin/settings", "Admin", "admin")}
+          {isAdmin && (
+            <span className="inline-flex items-center gap-1.5">
+              {link("/admin/settings", "Admin", "admin")}
+              {openSuggestions > 0 && (
+                <Link
+                  href="/admin/suggestions"
+                  className="rounded-full bg-marigold px-1.5 text-xs font-bold leading-5 text-[#241631]"
+                  aria-label={`${openSuggestions} open suggestion${openSuggestions === 1 ? "" : "s"}`}
+                >
+                  {openSuggestions}
+                </Link>
+              )}
+            </span>
+          )}
           <SignOutButton />
         </nav>
       </div>
