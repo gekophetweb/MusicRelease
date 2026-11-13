@@ -12,3 +12,6 @@ src/generated
 tests
 coverage
 *.log
+backups
+update.log
+.update.lock

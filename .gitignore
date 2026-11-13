@@ -45,3 +45,8 @@ next-env.d.ts
 /.superpowers/
 /src/generated/
 /dist/
+
+# update script
+/backups/
+/update.log
+/.update.lock/
