@@ -1,9 +1,11 @@
 import Link from "next/link";
+import { getFollowedArtists } from "@/artists/queries";
 import { AppHeader } from "@/components/AppHeader";
 import { ConnectButtons } from "@/components/ConnectButtons";
 import { ReleaseBoard } from "@/components/ReleaseBoard";
 import { ReleaseCard } from "@/components/ReleaseCard";
 import { SyncNowButton } from "@/components/SyncNowButton";
+import { Button, Select } from "@/components/ui";
 import { prisma } from "@/lib/db";
 import { requireUser } from "@/lib/session";
 import { getSetting } from "@/lib/settings";
@@ -39,19 +41,27 @@ function timeAgo(d: Date): string {
   return `${Math.round(hours / 24)} days ago`;
 }
 
-export default async function ReleasesPage({ searchParams }: { searchParams: Promise<{ since?: string; welcome?: string }> }) {
+export default async function ReleasesPage({ searchParams }: { searchParams: Promise<{ since?: string; welcome?: string; artist?: string }> }) {
   const user = await requireUser();
   const params = await searchParams;
   const period = PERIODS.find((p) => p.key === params.since) ?? PERIODS[1];
+  const artistId = params.artist || undefined;
 
-  const [{ albums, singles }, site, mail, accounts, lastRun, follows] = await Promise.all([
-    getReleasesForUser(user.id, { sinceDays: period.days }),
+  const [{ albums, singles }, site, mail, accounts, lastRun, followed] = await Promise.all([
+    getReleasesForUser(user.id, { sinceDays: period.days, artistId }),
     getSetting("site"),
     getSetting("mail"),
     prisma.account.findMany({ where: { userId: user.id }, select: { providerId: true, needsReconnect: true } }),
     prisma.syncRun.findFirst({ where: { userId: user.id, finishedAt: { not: null } }, orderBy: { startedAt: "desc" } }),
-    prisma.userArtist.count({ where: { userId: user.id } }),
+    getFollowedArtists(user.id),
   ]);
+  const follows = followed.length;
+  const artist = artistId ? followed.find((a) => a.id === artistId) : undefined;
+  // Same name on Spotify and TIDAL: tell the two apart in the picker.
+  const dupNames = new Set(followed.map((a) => a.name.toLowerCase()).filter((n, i, all) => all.indexOf(n) !== i));
+  const periodHref = (key: string) => `/releases?${new URLSearchParams({ since: key, ...(artist ? { artist: artist.id } : {}) })}`;
+  const emptyFor = (kind: string) =>
+    `No ${artist ? `${kind} by ${artist.name}` : `new ${kind}`} in the last ${period.label.toLowerCase()}.`;
   const reconnect = accounts.filter((a) => a.needsReconnect).map((a) => a.providerId as "spotify" | "tidal");
   const isAdmin = user.role === "admin";
   const nothing = albums.length + singles.length === 0;
@@ -85,9 +95,21 @@ export default async function ReleasesPage({ searchParams }: { searchParams: Pro
 
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div className="space-y-1">
-            <h1 className="font-display text-4xl font-bold tracking-tight">New releases</h1>
+            <h1 className="font-display text-4xl font-bold tracking-tight">{artist ? artist.name : "New releases"}</h1>
             <p className="text-sm text-muted">
-              From {follows} artist{follows === 1 ? "" : "s"} you follow. {lastRun?.finishedAt ? `Last checked ${timeAgo(lastRun.finishedAt)}.` : "Not checked yet."}
+              {artist ? (
+                <>
+                  Releases by {artist.name}.{" "}
+                  <Link href={`/releases?since=${period.key}`} className="text-plum underline underline-offset-2">
+                    Show all artists
+                  </Link>
+                  .
+                </>
+              ) : (
+                <>
+                  From {follows} artist{follows === 1 ? "" : "s"} you follow.
+                </>
+              )} {lastRun?.finishedAt ? `Last checked ${timeAgo(lastRun.finishedAt)}.` : "Not checked yet."}
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-4">
@@ -95,7 +117,7 @@ export default async function ReleasesPage({ searchParams }: { searchParams: Pro
               {PERIODS.map((p) => (
                 <Link
                   key={p.key}
-                  href={`/releases?since=${p.key}`}
+                  href={periodHref(p.key)}
                   aria-current={p.key === period.key ? "true" : undefined}
                   className={`rounded px-3 py-1 ${p.key === period.key ? "bg-plum text-paper" : "text-muted hover:text-ink"}`}
                 >
@@ -103,6 +125,26 @@ export default async function ReleasesPage({ searchParams }: { searchParams: Pro
                 </Link>
               ))}
             </nav>
+            {follows > 0 && (
+              <form action="/releases" className="flex gap-2">
+                <input type="hidden" name="since" value={period.key} />
+                <label htmlFor="artist-filter" className="sr-only">
+                  Filter by artist
+                </label>
+                <Select id="artist-filter" name="artist" defaultValue={artist?.id ?? ""} className="w-52">
+                  <option value="">All artists</option>
+                  {followed.map((a) => (
+                    <option key={a.id} value={a.id}>
+                      {a.name}
+                      {dupNames.has(a.name.toLowerCase()) ? ` (${a.provider === "tidal" ? "TIDAL" : "Spotify"})` : ""}
+                    </option>
+                  ))}
+                </Select>
+                <Button type="submit" variant="secondary">
+                  Filter
+                </Button>
+              </form>
+            )}
             <SyncNowButton />
           </div>
         </div>
@@ -116,8 +158,8 @@ export default async function ReleasesPage({ searchParams }: { searchParams: Pro
           <ReleaseBoard
             albumCount={albums.length}
             singleCount={singles.length}
-            albums={<Grid items={albums} empty={`No new albums in the last ${period.label.toLowerCase()}.`} />}
-            singles={<Grid items={singles} empty={`No new singles in the last ${period.label.toLowerCase()}.`} />}
+            albums={<Grid items={albums} empty={emptyFor("albums")} />}
+            singles={<Grid items={singles} empty={emptyFor("singles")} />}
           />
         )}
       </main>

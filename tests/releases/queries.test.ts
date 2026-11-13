@@ -92,3 +92,26 @@ test("year-precision releases sort by their year and show only the year", async 
   expect(albums[0].dateLabel).toBe("2009");
   expect(await prisma.release.count()).toBe(1);
 });
+
+test("artistId limits releases to that followed artist, including collaborations", async () => {
+  const u = await createUser();
+  const a = await artist("spotify", "A");
+  const b = await artist("spotify", "B");
+  await follow(u.id, a.id);
+  await follow(u.id, b.id);
+  await release("spotify", "only-a", [a.id], { title: "Only A" });
+  await release("spotify", "only-b", [b.id], { title: "Only B" });
+  await release("spotify", "a-and-b", [a.id, b.id], { title: "A and B" });
+  const { singles } = await getReleasesForUser(u.id, { now, artistId: a.id });
+  expect(singles.map((r) => r.title).sort()).toEqual(["A and B", "Only A"]);
+});
+
+test("artistId of an artist the user does not follow returns nothing", async () => {
+  const u = await createUser();
+  const mine = await artist("spotify", "A");
+  const theirs = await artist("spotify", "Z");
+  await follow(u.id, mine.id);
+  await release("spotify", "z-solo", [theirs.id]);
+  const { albums, singles } = await getReleasesForUser(u.id, { now, artistId: theirs.id });
+  expect(albums.length + singles.length).toBe(0);
+});

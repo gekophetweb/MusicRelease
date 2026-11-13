@@ -26,6 +26,8 @@ export interface ReleaseQuery {
   from?: Date;
   /** Only releases with this date precision. */
   precision?: DatePrecision;
+  /** Only releases by this artist (Artist.id); ignored unless the user follows them. */
+  artistId?: string;
   now?: Date;
 }
 
@@ -37,7 +39,10 @@ export async function getReleaseViews(userId: string, q: ReleaseQuery = {}): Pro
   const [rows, accounts] = await Promise.all([
     prisma.release.findMany({
       where: {
-        artists: { some: { artist: { followers: { some: { userId } } } } },
+        AND: [
+          { artists: { some: { artist: { followers: { some: { userId } } } } } },
+          ...(q.artistId ? [{ artists: { some: { artistId: q.artistId, artist: { followers: { some: { userId } } } } } }] : []),
+        ],
         ...(from ? { releaseDate: { gte: from, lte: now } } : {}),
         ...(q.precision ? { datePrecision: q.precision } : {}),
       },
