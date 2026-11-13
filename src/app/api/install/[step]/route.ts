@@ -3,7 +3,7 @@ import { saveInstallStep } from "@/install/steps";
 
 export const dynamic = "force-dynamic";
 
-const STEPS = ["site", "music", "mail", "schedule"] as const;
+const STEPS = ["site", "signin", "music", "mail", "schedule"] as const;
 type SavableStep = (typeof STEPS)[number];
 
 export async function POST(req: Request, ctx: { params: Promise<{ step: string }> }) {

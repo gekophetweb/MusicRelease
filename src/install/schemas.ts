@@ -29,6 +29,18 @@ export const MusicSchema = z
     }
   });
 
+export const SignInSchema = z
+  .object({ google: OAuthAppSchema, emailCode: z.object({ enabled: z.boolean() }) })
+  .superRefine((v, ctx) => {
+    if (!v.google.enabled && !v.emailCode.enabled) {
+      ctx.addIssue({ code: "custom", path: ["methods"], message: "Turn on at least one way to sign in" });
+    }
+    if (v.google.enabled) {
+      if (!v.google.clientId) ctx.addIssue({ code: "custom", path: ["google", "clientId"], message: "Client ID is required" });
+      if (!v.google.clientSecret) ctx.addIssue({ code: "custom", path: ["google", "clientSecret"], message: "Client secret is required" });
+    }
+  });
+
 /** The settings object is validated separately with MailSettingsSchema after secrets are merged. */
 export const MailStepSchema = z.object({ skip: z.boolean(), settings: z.unknown().optional() });
 

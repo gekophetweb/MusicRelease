@@ -12,6 +12,11 @@ export interface OAuthAppSettings {
   clientId: string;
   clientSecret: string;
 }
+/** How people sign in to the site. Streaming services are connected afterwards. */
+export interface SignInSettings {
+  google: OAuthAppSettings;
+  emailCode: { enabled: boolean };
+}
 export interface ScheduleSettings {
   syncCron: string;
   digestCron: string;
@@ -34,6 +39,7 @@ export interface InstallSecrets {
 }
 
 export interface SettingsMap {
+  signin: SignInSettings;
   site: SiteSettings;
   spotify: OAuthAppSettings;
   tidal: OAuthAppSettings;
@@ -44,7 +50,7 @@ export interface SettingsMap {
 }
 export type SettingKey = keyof SettingsMap;
 
-export const SECRET_KEYS: SettingKey[] = ["spotify", "tidal", "mail", "installSecrets"];
+export const SECRET_KEYS: SettingKey[] = ["signin", "spotify", "tidal", "mail", "installSecrets"];
 
 export const DEFAULT_SCHEDULE: ScheduleSettings = {
   syncCron: "0 6 * * *",

@@ -1,6 +1,7 @@
 import { assertSignupAllowed, SignupsClosedError } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { getSetting, SECRET_MASK, setSetting } from "@/lib/settings";
+import { LOCKOUT_ERROR } from "@/lib/signin";
 import { ensureSetupToken } from "@/lib/setup-token";
 import {
   completeInstall,
@@ -196,4 +197,74 @@ test("admin mail update does not require a new test when only the mask is sent b
     settings: { provider: "resend", from: { email: "m@example.com" }, apiKey: SECRET_MASK },
   });
   expect(res).toEqual({ ok: true });
+});
+
+// ---------- sign-in step ----------
+
+const googleOn = { enabled: true, clientId: "g-id", clientSecret: "g-secret" };
+const googleOff = { enabled: false, clientId: "", clientSecret: "" };
+
+test("signin step requires at least one method", async () => {
+  const res = await saveInstallStep("signin", { google: googleOff, emailCode: { enabled: false } }, await session());
+  expect(res.ok).toBe(false);
+  if (!res.ok) expect(res.errors.methods).toBe("Turn on at least one way to sign in");
+});
+
+test("signin step needs Google client id and secret when Google is on", async () => {
+  const res = await saveInstallStep("signin", { google: { enabled: true, clientId: "", clientSecret: "" }, emailCode: { enabled: false } }, await session());
+  expect(res.ok).toBe(false);
+  if (!res.ok) {
+    expect(res.errors["google.clientId"]).toBeDefined();
+    expect(res.errors["google.clientSecret"]).toBeDefined();
+  }
+});
+
+test("signin step records progress after the site step", async () => {
+  const s = await session();
+  await saveInstallStep("site", site, s);
+  await saveInstallStep("signin", { google: googleOn, emailCode: { enabled: false } }, s);
+  expect((await getSetting("install"))?.completedStep).toBe(3);
+});
+
+test("saving signin with the masked secret keeps the stored secret", async () => {
+  await setSetting("signin", { google: { enabled: true, clientId: "g", clientSecret: "real" }, emailCode: { enabled: false } });
+  const res = await saveInstallStep(
+    "signin",
+    { google: { enabled: true, clientId: "g", clientSecret: SECRET_MASK }, emailCode: { enabled: false } },
+    await session(),
+  );
+  expect(res.ok).toBe(true);
+  expect((await getSetting("signin"))?.google.clientSecret).toBe("real");
+});
+
+test("mail can't be skipped when email codes are on", async () => {
+  await setSetting("signin", { google: googleOff, emailCode: { enabled: true } });
+  const res = await saveInstallStep("mail", { skip: true }, await session());
+  expect(res.ok).toBe(false);
+  if (!res.ok) expect(res.errors.mail).toContain("Email sign-in codes need mail");
+});
+
+test("mail can be skipped when only Google is on", async () => {
+  await setSetting("signin", { google: googleOn, emailCode: { enabled: false } });
+  expect((await saveInstallStep("mail", { skip: true }, await session())).ok).toBe(true);
+});
+
+test("admin: turning Google off with email codes but no mail is refused", async () => {
+  await setSetting("signin", { google: googleOn, emailCode: { enabled: true } });
+  const res = await updateAdminSettings("signin", { google: googleOff, emailCode: { enabled: true } });
+  expect(res).toEqual({ ok: false, errors: { form: LOCKOUT_ERROR } });
+  expect((await getSetting("signin"))?.google.enabled).toBe(true);
+});
+
+test("admin: turning email codes off while Google is off is refused", async () => {
+  await setSetting("mail", mail);
+  await setSetting("signin", { google: googleOff, emailCode: { enabled: true } });
+  const res = await updateAdminSettings("signin", { google: googleOff, emailCode: { enabled: false } });
+  expect(res.ok).toBe(false);
+  if (!res.ok) expect(res.errors.form ?? res.errors.methods).toBeDefined();
+});
+
+test("admin: email codes alone are fine when mail is configured", async () => {
+  await setSetting("mail", mail);
+  expect((await updateAdminSettings("signin", { google: googleOff, emailCode: { enabled: true } })).ok).toBe(true);
 });
