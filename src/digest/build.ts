@@ -1,5 +1,5 @@
 import { createElement } from "react";
-import { render } from "@react-email/components";
+import { render } from "react-email";
 import { isPlaceholderEmail } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { DEFAULT_SCHEDULE, getSetting } from "@/lib/settings";
