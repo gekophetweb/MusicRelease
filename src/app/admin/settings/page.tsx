@@ -19,6 +19,9 @@ export default async function AdminSettingsPage() {
         <Link href="/admin/users" className="hover:text-ink">
           Users
         </Link>
+        <Link href="/admin/suggestions" className="hover:text-ink">
+          Suggestions
+        </Link>
       </nav>
       <h1 className="mb-10 mt-3 font-display text-4xl font-bold tracking-tight">Admin settings</h1>
       <AdminSettings
