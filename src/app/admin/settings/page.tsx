@@ -12,9 +12,14 @@ export default async function AdminSettingsPage() {
   const settings = await getEditableSettings();
   return (
     <main className="mx-auto max-w-4xl px-4 py-12">
-      <Link href="/releases" className="text-sm text-muted hover:text-ink">
-        Back to releases
-      </Link>
+      <nav className="flex gap-4 text-sm text-muted">
+        <Link href="/releases" className="hover:text-ink">
+          Back to releases
+        </Link>
+        <Link href="/admin/users" className="hover:text-ink">
+          Users
+        </Link>
+      </nav>
       <h1 className="mb-10 mt-3 font-display text-4xl font-bold tracking-tight">Admin settings</h1>
       <AdminSettings
         settings={settings}

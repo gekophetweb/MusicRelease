@@ -1,6 +1,6 @@
 import { detectOrigin, hasInstallSession } from "@/install/http";
 import { getEditableSettings, redirectUris } from "@/install/steps";
-import { getEnabledProviders } from "@/lib/auth";
+import { getSignInMethods } from "@/lib/signin";
 
 /** What the installer wizard needs to render; only filled in for a valid installer session. */
 export async function getInstallState(req: Request) {
@@ -11,7 +11,7 @@ export async function getInstallState(req: Request) {
     authenticated: true as const,
     detectedOrigin: detectOrigin(req),
     redirectUris: redirectUris(origin),
-    enabledProviders: await getEnabledProviders(),
+    signInMethods: await getSignInMethods(),
     ...settings,
   };
 }

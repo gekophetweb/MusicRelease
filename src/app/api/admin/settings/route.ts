@@ -4,7 +4,7 @@ import { adminFromRequest } from "@/lib/session";
 
 export const dynamic = "force-dynamic";
 
-const Body = z.object({ section: z.enum(["site", "music", "mail", "schedule"]), value: z.unknown() });
+const Body = z.object({ section: z.enum(["site", "signin", "music", "mail", "schedule"]), value: z.unknown() });
 
 export async function PUT(req: Request) {
   if (!(await adminFromRequest(req))) return new Response("Not found", { status: 404 });

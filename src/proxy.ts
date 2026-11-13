@@ -1,18 +1,9 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { gateDecision } from "@/install/gate";
+import { createInstalledCheck, gateDecision } from "@/install/gate";
 import { detectOrigin } from "@/install/http";
 import { isInstalled } from "@/lib/settings";
 
-// Once installed, the app stays installed: cache that forever. While pending, re-check every 2 s.
-let installedCache: { value: boolean; at: number } | null = null;
-
-async function installed(): Promise<boolean> {
-  if (installedCache?.value) return true;
-  if (installedCache && Date.now() - installedCache.at < 2000) return false;
-  const value = await isInstalled().catch(() => false);
-  installedCache = { value, at: Date.now() };
-  return value;
-}
+const installed = createInstalledCheck(isInstalled);
 
 export async function proxy(req: NextRequest) {
   const decision = gateDecision(req.nextUrl.pathname, await installed());

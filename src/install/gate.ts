@@ -16,3 +16,16 @@ export function gateDecision(path: string, installed: boolean): GateDecision {
   if (/\.[a-z0-9]{2,5}$/i.test(path)) return "next";
   return "redirect:/install";
 }
+
+/**
+ * "Is setup complete?" for the proxy. Once installed the app stays installed, so `true` is cached for good;
+ * `false` is never cached, or the redirect right after the last setup step would be sent back to /install.
+ */
+export function createInstalledCheck(isInstalled: () => Promise<boolean>): () => Promise<boolean> {
+  let installed = false;
+  return async () => {
+    if (installed) return true;
+    installed = await isInstalled().catch(() => false);
+    return installed;
+  };
+}
