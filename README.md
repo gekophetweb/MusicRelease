@@ -46,24 +46,37 @@ Open `https://releases.<your-domain>` from anywhere; it sends you to the install
 
 1. **Setup token** from the log.
 2. **Site**: the public URL (prefilled) and whether other people may sign up.
-3. **Music services**: Spotify and/or TIDAL client ID and secret. The installer shows the exact redirect URIs to paste into the developer dashboards:
+3. **Sign-in**: how people sign in — **Google** and/or a **6-digit code by email**. Google needs an OAuth client (see below) with redirect URI `https://releases.<your-domain>/api/auth/callback/google`.
+4. **Music services**: Spotify and/or TIDAL client ID and secret. People connect these after signing in. The installer shows the exact redirect URIs to paste into the developer dashboards:
    - Spotify: `https://releases.<your-domain>/api/auth/callback/spotify`
    - TIDAL: `https://releases.<your-domain>/api/auth/callback/tidal`
-4. **Mail**: Resend, Mailgun or custom SMTP. "Send test email" must succeed before you can continue (or choose "Set up mail later").
-5. **Schedule**: daily sync time, weekly email day/time and timezone (defaults: 06:00 daily, Friday 18:00).
-6. **Your account**: connect Spotify or TIDAL. That account becomes the admin and the installer is locked for good (`/install` returns 404).
+5. **Mail**: Resend, Mailgun or custom SMTP. "Send test email" must succeed before you can continue. "Set up mail later" is only offered when email codes are off, since codes are sent by mail.
+6. **Schedule**: daily sync time, weekly email day/time and timezone (defaults: 06:00 daily, Friday 18:00).
+7. **Your account**: sign in with Google or an email code. That account becomes the admin and the installer is locked for good (`/install` returns 404). Then connect Spotify or TIDAL.
 
 All of this can be changed later under **Admin → Settings**.
 
+## Signing in
+
+People sign in to MusicReleases with **Google** or a **code sent to their email**; Spotify and TIDAL are only connected afterwards, to read follows and releases. Admin → Settings refuses changes that would leave no working way to sign in.
+
+**Google** — any Google account. In https://console.cloud.google.com/apis/credentials create an OAuth client of type *Web application* and add the redirect URI above as an authorized redirect URI.
+
+**Email code** — needs working mail. Codes have 6 digits, expire after 10 minutes and allow 5 attempts. With sign-ups closed, addresses that don't belong to an account get no code.
+
+**Upgrading an existing site:** sign-in defaults to email codes, so make sure mail works (Admin → Settings → Mail; settings for the removed Sender provider must be re-entered). Until a sign-in method works, existing users can still sign in with Spotify/TIDAL. Then review Admin → Settings → Sign-in.
+
+**Existing users** (from before sign-in moved to Google/email) sign in with a code to the email their account already has; their followed artists and settings stay. Google works for them after that first code sign-in. Accounts whose email was never verified must reconnect Spotify/TIDAL once after that first sign-in. Accounts without a real email (TIDAL often hides it) can't receive a code: set one for them under **Admin → Users**.
+
 ## Music service apps
 
-**Spotify** — https://developer.spotify.com/dashboard → Create app → Web API. Add the redirect URI above. While the app is in *Development Mode*, only users you add under **User Management** (by their Spotify email) can connect; that is fine for personal or family use.
+**Spotify** — needs a **Spotify Premium** account: since February 2026 Spotify only runs *Development Mode* apps while the app owner has Premium (if it lapses, sign-in and syncing stop until you resubscribe). https://developer.spotify.com/dashboard → Create app → Web API. Add the redirect URI above. In Development Mode up to **5 users** can connect, each added under **User Management** by their Spotify email; that is fine for personal or family use.
 
-**TIDAL** — https://developer.tidal.com/dashboard → create an app, add the redirect URI above, and enable the `user.read` and `collection.read` scopes.
+**TIDAL** — sign in to https://developer.tidal.com/dashboard with your TIDAL account → create an app, add the redirect URI above, and enable the `user.read` and `collection.read` scopes.
 
 ## Mail providers
 
-- **Resend** (resend.com): API key from API Keys (a "Sending access" key is enough). The from address's domain must be verified under Domains; with a "Full access" key the test email also checks that for you.
+- **Resend** (resend.com, the free plan is enough): API key from API Keys (a "Sending access" key is enough). The from address's domain must be verified under Domains; with a "Full access" key the test email also checks that for you.
 - **Mailgun**: sending domain, API key and region (EU or US). The domain must be verified in Mailgun.
 - **Custom SMTP**: host, port, encryption (STARTTLS 587 / TLS 465 / none) and optional username and password.
 

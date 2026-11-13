@@ -9,7 +9,7 @@ beforeEach(resetDb);
 test("buildAuthOptions registers only enabled providers", () => {
   const opts = buildAuthOptions({ site, spotify: spotifyOn, tidal: { ...tidalOn, enabled: false } });
   expect(Object.keys(opts.socialProviders ?? {})).toEqual(["spotify"]);
-  expect((opts.socialProviders?.spotify as { scope?: string[] }).scope).toEqual(["user-follow-read", "user-read-email"]);
+  expect((opts.socialProviders?.spotify as { scope?: string[] }).scope).toEqual(["user-follow-read"]);
   expect(opts.plugins?.map((p) => p.id)).not.toContain("generic-oauth");
 });
 
@@ -26,9 +26,41 @@ test("buildAuthOptions uses the public URL and encrypts OAuth tokens", () => {
   expect(opts.account?.encryptOAuthTokens).toBe(true);
 });
 
-test("no implicit account linking by email; linking only from a signed-in session", () => {
+test("streaming services are trusted for linking (sign-in with them is blocked), Google is not", () => {
+  const opts = buildAuthOptions({ site, spotify: spotifyOn, tidal: tidalOn, signin: { google: { enabled: true, clientId: "g", clientSecret: "s" }, emailCode: { enabled: false } } });
+  expect(opts.account?.accountLinking).toEqual({ enabled: true, trustedProviders: ["spotify", "tidal"], allowDifferentEmails: true });
+});
+
+test("legacy fallback: an installed site without any sign-in method keeps Spotify/TIDAL sign-in, trusting nobody", () => {
+  const opts = buildAuthOptions({ site, spotify: spotifyOn, tidal: tidalOn, installed: true });
+  expect(opts.account?.accountLinking).toEqual({ enabled: true, trustedProviders: [], allowDifferentEmails: true });
+});
+
+const signin = (google: boolean, emailCode: boolean) => ({
+  google: { enabled: google, clientId: "g-id", clientSecret: "g-secret" },
+  emailCode: { enabled: emailCode },
+});
+
+test("Google is registered only when sign-in settings enable it", () => {
+  const on = buildAuthOptions({ site, spotify: null, tidal: null, signin: signin(true, false) });
+  expect((on.socialProviders?.google as { scope?: string[] }).scope).toEqual(["openid", "email", "profile"]);
+  const off = buildAuthOptions({ site, spotify: null, tidal: null, signin: signin(false, true), mailConfigured: true });
+  expect(Object.keys(off.socialProviders ?? {})).not.toContain("google");
+});
+
+test("email-otp plugin only when email codes are on and mail is configured", () => {
+  const ids = (emailCode: boolean, mailConfigured: boolean) =>
+    buildAuthOptions({ site, spotify: null, tidal: null, signin: signin(false, emailCode), mailConfigured }).plugins?.map((p) => p.id) ?? [];
+  expect(ids(true, true)).toContain("email-otp");
+  expect(ids(true, false)).not.toContain("email-otp");
+  expect(ids(false, true)).not.toContain("email-otp");
+});
+
+test("Spotify and TIDAL cannot sign up", () => {
   const opts = buildAuthOptions({ site, spotify: spotifyOn, tidal: tidalOn });
-  expect(opts.account?.accountLinking).toEqual({ enabled: true, disableImplicitLinking: true, allowDifferentEmails: true });
+  expect(opts.socialProviders?.spotify).toMatchObject({ disableSignUp: true, disableImplicitSignUp: true });
+  const generic = opts.plugins?.find((p) => p.id === "generic-oauth") as unknown as { options?: { config: { disableSignUp?: boolean }[] } };
+  expect(generic.options?.config[0]).toMatchObject({ disableSignUp: true, disableImplicitSignUp: true });
 });
 
 test("getEnabledProviders lists providers with a client id", async () => {

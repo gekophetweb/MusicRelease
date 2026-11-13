@@ -8,14 +8,16 @@ import {
   SECRET_MASK,
   setSetting,
   type OAuthAppSettings,
+  type SignInSettings,
 } from "@/lib/settings";
+import { availableMethods, LOCKOUT_ERROR } from "@/lib/signin";
 import { verifySetupToken } from "@/lib/setup-token";
-import { MailSettingsSchema, type MailSettings } from "@/mail";
-import { MailStepSchema, MusicSchema, ScheduleSchema, SiteSchema, toErrors } from "@/install/schemas";
+import { isMailConfigured, MailSettingsSchema, type MailSettings } from "@/mail";
+import { MailStepSchema, MusicSchema, ScheduleSchema, SignInSchema, SiteSchema, toErrors } from "@/install/schemas";
 
-export const INSTALL_STEPS = ["token", "site", "music", "mail", "schedule", "admin"] as const;
+export const INSTALL_STEPS = ["token", "site", "signin", "music", "mail", "schedule", "admin"] as const;
 export type InstallStep = (typeof INSTALL_STEPS)[number];
-export type SettingsSection = "site" | "music" | "mail" | "schedule";
+export type SettingsSection = "site" | "signin" | "music" | "mail" | "schedule";
 
 export type StepResult = { ok: true } | { ok: false; errors: Record<string, string> };
 
@@ -131,6 +133,19 @@ async function applySection(section: SettingsSection, input: unknown, context: "
       await setSetting("site", parsed.data);
       return { ok: true };
     }
+    case "signin": {
+      const raw = (input ?? {}) as Partial<SignInSettings>;
+      const stored = await getSetting("signin");
+      const merged = { ...raw, google: raw.google ? keepMaskedSecrets(raw.google, stored?.google ?? null) : raw.google };
+      const parsed = SignInSchema.safeParse(merged);
+      if (!parsed.success) return { ok: false, errors: toErrors(parsed.error) };
+      if (context === "admin") {
+        const methods = availableMethods(parsed.data, isMailConfigured(await getSetting("mail")));
+        if (!methods.google && !methods.emailCode) return { ok: false, errors: { form: LOCKOUT_ERROR } };
+      }
+      await setSetting("signin", parsed.data);
+      return { ok: true };
+    }
     case "music": {
       const raw = (input ?? {}) as { spotify?: OAuthAppSettings; tidal?: OAuthAppSettings };
       const [spotify, tidal] = await Promise.all([getSetting("spotify"), getSetting("tidal")]);
@@ -149,6 +164,12 @@ async function applySection(section: SettingsSection, input: unknown, context: "
       if (!step.success) return { ok: false, errors: toErrors(step.error) };
       if (step.data.skip) {
         if (context === "install") {
+          if ((await getSetting("signin"))?.emailCode.enabled) {
+            return {
+              ok: false,
+              errors: { mail: "Email sign-in codes need mail. Set up mail now, or turn off email codes in the Sign-in step." },
+            };
+          }
           const install = (await getSetting("install")) ?? { status: "pending" as const, completedStep: 0 };
           await setSetting("install", { ...install, mailSkipped: true });
         }
@@ -213,6 +234,7 @@ export async function completeInstall(userId: string): Promise<void> {
 
 export function redirectUris(publicUrl: string) {
   return {
+    google: `${publicUrl}/api/auth/callback/google`,
     spotify: `${publicUrl}/api/auth/callback/spotify`,
     tidal: `${publicUrl}/api/auth/callback/tidal`,
   };
@@ -222,6 +244,7 @@ export interface EditableSettings {
   completedStep: number;
   mailSkipped: boolean;
   site: Awaited<ReturnType<typeof getSetting<"site">>>;
+  signin: SignInSettings | null;
   spotify: OAuthAppSettings | null;
   tidal: OAuthAppSettings | null;
   mail: MailSettings | null;
@@ -229,9 +252,10 @@ export interface EditableSettings {
 }
 
 export async function getEditableSettings(): Promise<EditableSettings> {
-  const [install, site, spotify, tidal, mail, schedule] = await Promise.all([
+  const [install, site, signin, spotify, tidal, mail, schedule] = await Promise.all([
     getSetting("install"),
     getSetting("site"),
+    getSetting("signin"),
     getSetting("spotify"),
     getSetting("tidal"),
     getSetting("mail"),
@@ -241,6 +265,7 @@ export async function getEditableSettings(): Promise<EditableSettings> {
     completedStep: install?.completedStep ?? 0,
     mailSkipped: install?.mailSkipped ?? false,
     site,
+    signin,
     spotify,
     tidal,
     mail,

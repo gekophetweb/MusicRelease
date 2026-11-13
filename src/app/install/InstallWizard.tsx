@@ -1,20 +1,22 @@
 "use client";
 
 import { useCallback, useState } from "react";
-import { ConnectButtons } from "@/components/ConnectButtons";
-import { MailForm, MusicForm, postJson, ScheduleForm, SiteForm } from "@/components/settings/forms";
+import { MailForm, MusicForm, postJson, ScheduleForm, SignInForm, SiteForm } from "@/components/settings/forms";
+import { SignIn } from "@/components/SignIn";
 import { Button, Field, Notice, TextInput } from "@/components/ui";
 import type { MailSettings } from "@/mail/types";
-import type { OAuthAppSettings, ScheduleSettings, SiteSettings } from "@/lib/settings";
+import type { OAuthAppSettings, ScheduleSettings, SignInSettings, SiteSettings } from "@/lib/settings";
+import type { SignInMethods } from "@/lib/signin";
 
 export interface InstallState {
   authenticated: boolean;
   detectedOrigin?: string;
-  redirectUris?: { spotify: string; tidal: string };
-  enabledProviders?: Array<"spotify" | "tidal">;
+  redirectUris?: { google: string; spotify: string; tidal: string };
+  signInMethods?: SignInMethods;
   completedStep?: number;
   mailSkipped?: boolean;
   site?: SiteSettings | null;
+  signin?: SignInSettings | null;
   spotify?: OAuthAppSettings | null;
   tidal?: OAuthAppSettings | null;
   mail?: MailSettings | null;
@@ -24,6 +26,7 @@ export interface InstallState {
 const STEPS = [
   { key: "token", title: "Setup token" },
   { key: "site", title: "Site" },
+  { key: "signin", title: "Sign-in" },
   { key: "music", title: "Music services" },
   { key: "mail", title: "Mail" },
   { key: "schedule", title: "Schedule" },
@@ -102,6 +105,16 @@ export function InstallWizard({ initial, signinError }: { initial: InstallState;
         )}
 
         {step === 2 && state.redirectUris && (
+          <SignInForm
+            initial={state.signin ?? null}
+            redirectUri={state.redirectUris.google}
+            submit={(v) => postJson("/api/install/signin", v)}
+            submitLabel="Save and continue"
+            onSaved={next}
+          />
+        )}
+
+        {step === 3 && state.redirectUris && (
           <MusicForm
             initial={{ spotify: state.spotify ?? null, tidal: state.tidal ?? null }}
             redirectUris={state.redirectUris}
@@ -111,12 +124,18 @@ export function InstallWizard({ initial, signinError }: { initial: InstallState;
           />
         )}
 
-        {step === 3 && (
+        {step === 4 && (
           <>
-            <p className="text-muted">The weekly email with new releases is sent with these settings.</p>
+            <p className="text-muted">
+              The weekly email with new releases{state.signin?.emailCode.enabled ? " and the sign-in codes are" : " is"} sent with
+              these settings.
+            </p>
+            {state.signin?.emailCode.enabled && (
+              <Notice tone="info">Email sign-in codes are on, so mail is required. Turn them off in the Sign-in step to set up mail later.</Notice>
+            )}
             <MailForm
               initial={state.mail ?? null}
-              allowSkip
+              allowSkip={!state.signin?.emailCode.enabled}
               submit={(v) => postJson("/api/install/mail", v)}
               testMail={(settings, to) => postJson("/api/install/test-mail", { settings, to })}
               submitLabel="Save and continue"
@@ -125,7 +144,7 @@ export function InstallWizard({ initial, signinError }: { initial: InstallState;
           </>
         )}
 
-        {step === 4 && state.schedule && (
+        {step === 5 && state.schedule && (
           <ScheduleForm
             initial={state.schedule}
             submit={(v) => postJson("/api/install/schedule", v)}
@@ -134,14 +153,14 @@ export function InstallWizard({ initial, signinError }: { initial: InstallState;
           />
         )}
 
-        {step === 5 && (
+        {step === 6 && (
           <div className="space-y-4">
             <p className="text-muted">
-              Connect your own music account. That account becomes the admin of this site, and setup is locked after this
-              step.
+              Sign in with your own account. It becomes the admin of this site, and setup is locked after this step. You
+              connect Spotify or TIDAL right after.
             </p>
-            {signinError && <Notice tone="error">Connecting did not finish. Try again.</Notice>}
-            <ConnectButtons providers={state.enabledProviders ?? []} callbackURL="/install/complete" />
+            {signinError && <Notice tone="error">Signing in did not finish. Try again.</Notice>}
+            <SignIn methods={state.signInMethods ?? { google: false, emailCode: false }} callbackURL="/install/complete" />
           </div>
         )}
       </section>

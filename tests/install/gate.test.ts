@@ -36,3 +36,18 @@ test("after install normal pages pass", () => {
 test("paths that only start with 'install' are not the installer", () => {
   expect(gateDecision("/installer-guide", true)).toBe("next");
 });
+
+test("installed check never serves a stale 'not installed' right after setup completes", async () => {
+  const { createInstalledCheck } = await import("@/install/gate");
+  let installed = false;
+  let calls = 0;
+  const check = createInstalledCheck(async () => {
+    calls++;
+    return installed;
+  });
+  expect(await check()).toBe(false);
+  installed = true; // completeInstall ran; the very next request must see it
+  expect(await check()).toBe(true);
+  expect(await check()).toBe(true);
+  expect(calls).toBe(2); // once installed, the answer is cached for good
+});

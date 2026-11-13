@@ -4,7 +4,7 @@ import { useMemo, useState, type FormEvent, type ReactNode } from "react";
 import { Button, CopyField, Field, Notice, Select, TextInput, Toggle } from "@/components/ui";
 import { describeSchedule, fromDailyCron, fromWeeklyCron, toDailyCron, toWeeklyCron, WEEKDAYS } from "@/install/cron-ui";
 import type { MailSettings } from "@/mail/types";
-import type { OAuthAppSettings, ScheduleSettings, SiteSettings } from "@/lib/settings";
+import type { OAuthAppSettings, ScheduleSettings, SignInSettings, SiteSettings } from "@/lib/settings";
 import { PROVIDER_SCOPES } from "@/providers/scopes";
 
 export type Result = { ok: true } | { ok: false; errors: Record<string, string> };
@@ -132,12 +132,15 @@ const SERVICES = {
   spotify: {
     name: "Spotify",
     dashboard: "https://developer.spotify.com/dashboard",
-    steps: "Create an app, choose Web API, and paste the redirect URI below. In Development Mode, add each listener's Spotify email under User Management.",
-    permissionsHint: "Nothing to tick in the dashboard: Spotify asks each listener to approve these when they sign in.",
+    account:
+      "A Spotify Premium account. Since February 2026 Spotify only runs Development Mode apps while the app owner has Premium; if it lapses, sign-in and syncing stop until you resubscribe.",
+    steps: "Create an app, choose Web API, and paste the redirect URI below. In Development Mode the app allows up to 5 listeners: add each one's Spotify email under User Management.",
+    permissionsHint: "Nothing to tick in the dashboard: Spotify asks each listener to approve these when they connect.",
   },
   tidal: {
     name: "TIDAL",
     dashboard: "https://developer.tidal.com/dashboard",
+    account: "A TIDAL account to sign in to the developer dashboard.",
     steps: "Create an app and add the redirect URI below.",
     permissionsHint: "Enable these scopes in your app's settings in the TIDAL dashboard, otherwise sign-in fails.",
   },
@@ -170,6 +173,9 @@ export function MusicForm({
             <Toggle id={`${key}-enabled`} checked={s.enabled} onChange={(enabled) => set({ enabled })} label={`Use ${meta.name}`} />
             {s.enabled && (
               <div className="space-y-4">
+                <p className="text-sm">
+                  <span className="font-medium">Account needed:</span> <span className="text-muted">{meta.account}</span>
+                </p>
                 <p className="text-sm text-muted">
                   Open the{" "}
                   <a href={meta.dashboard} target="_blank" rel="noreferrer" className="text-plum underline underline-offset-2">
@@ -212,6 +218,82 @@ export function MusicForm({
           </fieldset>
         );
       })}
+    </FormShell>
+  );
+}
+
+// ---------------- Sign-in ----------------
+
+const EMPTY_SIGNIN: SignInSettings = { google: emptyApp, emailCode: { enabled: true } };
+
+export function SignInForm({
+  initial,
+  redirectUri,
+  submit,
+  submitLabel,
+  onSaved,
+}: {
+  initial: SignInSettings | null;
+  redirectUri: string;
+  submit: Submit<SignInSettings>;
+  submitLabel: string;
+  onSaved?: () => void;
+}) {
+  const [v, setV] = useState<SignInSettings>(initial ?? EMPTY_SIGNIN);
+  const { errors, busy, saved, run } = useSubmit(submit, onSaved);
+  const setGoogle = (patch: Partial<OAuthAppSettings>) => setV({ ...v, google: { ...v.google, ...patch } });
+  return (
+    <FormShell onSubmit={() => run(v)} errors={errors} busy={busy} saved={saved} submitLabel={submitLabel}>
+      <p className="text-sm text-muted">
+        How people sign in to this site. After signing in they connect Spotify or TIDAL to see their releases.
+      </p>
+      {errors.methods && <Notice tone="error">{errors.methods}</Notice>}
+      <fieldset className="space-y-4 rounded-lg border border-line bg-surface p-4">
+        <legend className="px-1 font-display text-lg font-semibold">Google</legend>
+        <Toggle id="google-enabled" checked={v.google.enabled} onChange={(enabled) => setGoogle({ enabled })} label="Sign in with Google" />
+        {v.google.enabled && (
+          <div className="space-y-4">
+            <p className="text-sm">
+              <span className="font-medium">Account needed:</span>{" "}
+              <span className="text-muted">
+                Any Google account. Create an OAuth client (type &quot;Web application&quot;) in Google Cloud Console → APIs &amp;
+                Services → Credentials.
+              </span>
+            </p>
+            <p className="text-sm text-muted">
+              Open the{" "}
+              <a
+                href="https://console.cloud.google.com/apis/credentials"
+                target="_blank"
+                rel="noreferrer"
+                className="text-plum underline underline-offset-2"
+              >
+                Google Cloud credentials page
+              </a>
+              , create the client and add the redirect URI below as an authorized redirect URI.
+            </p>
+            <Field label="Redirect URI" htmlFor="google-redirect">
+              <CopyField id="google-redirect" value={redirectUri} />
+            </Field>
+            <Field label="Client ID" htmlFor="google-clientId" error={errors["google.clientId"]}>
+              <TextInput id="google-clientId" value={v.google.clientId} onChange={(e) => setGoogle({ clientId: e.target.value })} autoComplete="off" />
+            </Field>
+            <Field label="Client secret" htmlFor="google-clientSecret" error={errors["google.clientSecret"]}>
+              <SecretInput id="google-clientSecret" value={v.google.clientSecret} onChange={(clientSecret) => setGoogle({ clientSecret })} />
+            </Field>
+          </div>
+        )}
+      </fieldset>
+      <fieldset className="space-y-4 rounded-lg border border-line bg-surface p-4">
+        <legend className="px-1 font-display text-lg font-semibold">Email code</legend>
+        <Toggle
+          id="email-code-enabled"
+          checked={v.emailCode.enabled}
+          onChange={(enabled) => setV({ ...v, emailCode: { enabled } })}
+          label="Sign in with a code by email"
+          description="People get a 6-digit code by email. Needs mail, which you set up in the Mail step."
+        />
+      </fieldset>
     </FormShell>
   );
 }
@@ -333,7 +415,7 @@ export function MailForm({
               label="Resend API key"
               htmlFor="mail-resend-key"
               error={e("apiKey")}
-              hint="Create one in Resend under API Keys. The from email's domain must be verified under Domains."
+              hint="Needs a Resend account (the free plan is enough). Create a key under API Keys; the from email's domain must be verified under Domains."
             >
               <SecretInput id="mail-resend-key" value={v.apiKey} onChange={(apiKey) => set({ apiKey })} />
             </Field>
@@ -352,7 +434,12 @@ export function MailForm({
                   </Select>
                 </Field>
               </div>
-              <Field label="Mailgun API key" htmlFor="mail-mg-key" error={e("apiKey")}>
+              <Field
+                label="Mailgun API key"
+                htmlFor="mail-mg-key"
+                error={e("apiKey")}
+                hint="Needs a Mailgun account with the sending domain above added and verified."
+              >
                 <SecretInput id="mail-mg-key" value={v.apiKey} onChange={(apiKey) => set({ apiKey })} />
               </Field>
             </>

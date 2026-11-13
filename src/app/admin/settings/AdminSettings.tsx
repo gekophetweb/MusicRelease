@@ -1,6 +1,6 @@
 "use client";
 
-import { MailForm, MusicForm, postJson, ScheduleForm, SiteForm } from "@/components/settings/forms";
+import { MailForm, MusicForm, postJson, ScheduleForm, SignInForm, SiteForm } from "@/components/settings/forms";
 import type { EditableSettings } from "@/install/steps";
 
 const save = (section: string) => (value: unknown) => postJson("/api/admin/settings", { section, value }, "PUT");
@@ -11,13 +11,16 @@ export function AdminSettings({
   adminEmail,
 }: {
   settings: EditableSettings;
-  redirectUris: { spotify: string; tidal: string };
+  redirectUris: { google: string; spotify: string; tidal: string };
   adminEmail: string;
 }) {
   return (
     <div className="space-y-14">
       <Section title="Site" id="site">
         <SiteForm initial={settings.site} submit={save("site")} submitLabel="Save site" />
+      </Section>
+      <Section title="Sign-in" id="signin">
+        <SignInForm initial={settings.signin} redirectUri={redirectUris.google} submit={save("signin")} submitLabel="Save sign-in" />
       </Section>
       <Section title="Music services" id="music">
         <MusicForm

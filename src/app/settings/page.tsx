@@ -19,7 +19,10 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
     getUserSettings(user.id),
     getSetting("site"),
     getSetting("mail"),
-    prisma.account.findMany({ where: { userId: user.id }, select: { providerId: true, needsReconnect: true, createdAt: true } }),
+    prisma.account.findMany({
+      where: { userId: user.id, providerId: { in: ["spotify", "tidal"] } },
+      select: { providerId: true, needsReconnect: true, createdAt: true },
+    }),
     getEnabledProviders(),
   ]);
   const connected = new Set(accounts.map((a) => a.providerId));
@@ -63,7 +66,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
           {toConnect.length > 0 && (
             <div className="space-y-3">
               <p className="text-sm text-muted">Also follow artists on another service? Connect it to see those releases too.</p>
-              <ConnectButtons providers={toConnect} callbackURL="/settings" mode="link" />
+              <ConnectButtons providers={toConnect} callbackURL="/settings" />
             </div>
           )}
         </section>
