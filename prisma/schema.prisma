@@ -113,6 +113,7 @@ model User {
   updatedAt     DateTime  @updatedAt
   sessions      Session[]
   accounts      Account[]
+  suggestions   Suggestion[]
 
   @@map("user")
 }
@@ -168,4 +169,20 @@ model Verification {
 
   @@index([identifier])
   @@map("verification")
+}
+
+/// An idea or problem a signed-in user sent to the admin (suggestion box).
+model Suggestion {
+  id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  kind      String // "idea" | "problem"
+  message   String
+  page      String?
+  status    String    @default("open") // "open" | "done"
+  createdAt DateTime  @default(now())
+  doneAt    DateTime?
+
+  @@index([status, createdAt])
+  @@index([userId, createdAt])
 }

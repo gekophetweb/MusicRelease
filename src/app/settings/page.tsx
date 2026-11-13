@@ -1,5 +1,6 @@
 import { AppHeader } from "@/components/AppHeader";
 import { ConnectButtons } from "@/components/ConnectButtons";
+import { connectErrorMessage } from "@/lib/connect-errors";
 import { getEnabledProviders } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { requireUser } from "@/lib/session";
@@ -12,7 +13,7 @@ export const metadata = { title: "Settings · MusicReleases" };
 
 const NAME = { spotify: "Spotify", tidal: "TIDAL" } as const;
 
-export default async function SettingsPage({ searchParams }: { searchParams: Promise<{ error?: string }> }) {
+export default async function SettingsPage({ searchParams }: { searchParams: Promise<{ error?: string | string[] }> }) {
   const user = await requireUser();
   const { error } = await searchParams;
   const [settings, site, mail, accounts, enabled] = await Promise.all([
@@ -56,10 +57,9 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
               </li>
             ))}
           </ul>
-          {error === "link" && (
+          {connectErrorMessage(error) && (
             <p role="alert" className="rounded-md border border-danger/40 px-4 py-3 text-sm text-danger">
-              Connecting did not finish. If that music account is already used by someone else on this site, sign in with it
-              there instead.
+              {connectErrorMessage(error)}
             </p>
           )}
           {broken.length > 0 && <ConnectButtons providers={broken} callbackURL="/settings" />}
