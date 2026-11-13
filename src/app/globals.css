@@ -1,0 +1,60 @@
+@import "tailwindcss";
+
+/* Palette: turntable-mat plum with a marigold label sticker. Album art supplies the rest of the colour. */
+:root {
+  --paper: #f6f5f8;
+  --surface: #ffffff;
+  --ink: #241631;
+  --muted: #6b5e78;
+  --line: #e3dde9;
+  --plum: #4a2160;
+  --marigold: #f2b134;
+  --danger: #b42318;
+  --ok: #1f7a4d;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --paper: #160e1c;
+    --surface: #211628;
+    --ink: #f3eef6;
+    --muted: #b3a5bf;
+    --line: #3a2c45;
+    --plum: #c9a2e0;
+    --marigold: #f5c35a;
+    --danger: #ff8a7a;
+    --ok: #6fd3a0;
+  }
+}
+
+@theme inline {
+  --color-paper: var(--paper);
+  --color-surface: var(--surface);
+  --color-ink: var(--ink);
+  --color-muted: var(--muted);
+  --color-line: var(--line);
+  --color-plum: var(--plum);
+  --color-marigold: var(--marigold);
+  --color-danger: var(--danger);
+  --color-ok: var(--ok);
+  --font-display: var(--font-bricolage), ui-sans-serif, system-ui, sans-serif;
+  --font-sans: var(--font-instrument), ui-sans-serif, system-ui, sans-serif;
+}
+
+body {
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-sans);
+}
+
+:focus-visible {
+  outline: 2px solid var(--marigold);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    transition: none !important;
+    animation: none !important;
+  }
+}

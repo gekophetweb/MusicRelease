@@ -1,0 +1,84 @@
+name: music-releases
+
+# Shared settings for the website and the worker (same image, different command).
+x-app-env: &app-env
+  DATABASE_URL: postgresql://${POSTGRES_USER:-music}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-music}
+  APP_SECRET: ${APP_SECRET:?set APP_SECRET in .env}
+  INSTALL_TOKEN: ${INSTALL_TOKEN:-}
+  TZ: ${TZ:-Europe/Amsterdam}
+
+services:
+  # PostgreSQL in its own container; only reachable on the internal network.
+  db:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-music}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+      POSTGRES_DB: ${POSTGRES_DB:-music}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-music} -d ${POSTGRES_DB:-music}"]
+      interval: 10s
+      retries: 5
+    networks: [internal]
+
+  # The website + installer. Applies database migrations on start.
+  app:
+    build: .
+    image: music-releases:latest
+    restart: unless-stopped
+    environment:
+      <<: *app-env
+    depends_on:
+      db: { condition: service_healthy }
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:3000/api/health"]
+      interval: 30s
+      timeout: 5s
+      start_period: 30s
+      retries: 3
+    networks: [internal]
+    # No "ports:" on purpose — the site is only reachable through the Cloudflare Tunnel.
+    # To open it locally without a tunnel, uncomment:
+    # ports: ["127.0.0.1:3000:3000"]
+
+  # Daily release sync + weekly email digest (schedules are set in the installer / admin settings).
+  worker:
+    image: music-releases:latest
+    restart: unless-stopped
+    command: ["node", "dist/worker.mjs"]
+    environment:
+      <<: *app-env
+      RUN_SYNC_ON_START: ${RUN_SYNC_ON_START:-false}
+    depends_on:
+      app: { condition: service_healthy } # the app container runs the migrations first
+    networks: [internal]
+
+  # Cloudflare Tunnel: publishes the app on your hostname without opening ports.
+  # In the Cloudflare dashboard, point the tunnel's public hostname to  http://app:3000
+  cloudflared:
+    image: cloudflare/cloudflared:latest # pin a dated tag (e.g. 2026.10.0) for reproducible deploys
+    restart: unless-stopped
+    command: tunnel --no-autoupdate run
+    environment:
+      TUNNEL_TOKEN: ${TUNNEL_TOKEN:?set TUNNEL_TOKEN in .env}
+    depends_on:
+      app: { condition: service_healthy }
+    networks: [internal]
+
+  # Development only: catches all mail. Start with  docker compose --profile dev up -d
+  # In the installer choose Custom SMTP: host "mailpit", port 1025, encryption None.
+  mailpit:
+    image: axllent/mailpit:latest
+    profiles: [dev]
+    restart: unless-stopped
+    ports: ["127.0.0.1:8025:8025"]
+    networks: [internal]
+
+volumes:
+  pgdata:
+
+networks:
+  internal:

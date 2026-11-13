@@ -1,0 +1,17 @@
+.git
+.gitignore
+.env
+.env.*
+!.env.example
+node_modules
+.next
+dist
+src/generated
+.superpowers
+.claude
+tests
+coverage
+*.log
+backups
+update.log
+.update.lock
