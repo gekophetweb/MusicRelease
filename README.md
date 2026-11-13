@@ -75,6 +75,73 @@ All of this can be changed later under **Admin → Settings**.
 - Explicit and clean editions, and the same release on both Spotify and TIDAL, are shown once.
 - The weekly email lists releases dated in the past 7 days (day-exact dates only) and is skipped when there are none.
 
+## Updating
+
+Releases are published on the `main` branch. To update a running install:
+
+1. Make a backup first (see [Backups](#backups)).
+2. Get the new code:
+
+   ```bash
+   git pull origin main
+   ```
+
+3. Rebuild the image and restart the containers:
+
+   ```bash
+   docker compose up -d --build
+   ```
+
+   `app` and `worker` share one image, so this one build updates both. On start, `app` applies any new database migrations before serving the site, and `worker` waits until `app` is healthy. Your settings, accounts and releases stay in the `pgdata` volume.
+
+4. Check that it came up:
+
+   ```bash
+   docker compose ps
+   ```
+
+   ```bash
+   docker compose logs app --tail 50
+   ```
+
+5. Optionally remove the old, now unused image layers:
+
+   ```bash
+   docker image prune -f
+   ```
+
+If `.env.example` gained new variables in the release, copy them into your `.env` before step 3.
+
+### Automatic updates (cron)
+
+[`scripts/update.sh`](scripts/update.sh) does all of the above in one go and is made to run from cron:
+
+- It does nothing when `origin/main` has no new commit.
+- Before updating it writes a gzipped database backup to `backups/` and keeps the newest 14.
+- It refuses to run when the checkout has local changes or another update is still running.
+- It warns in the log about settings in `.env.example` that are missing from `.env`.
+- It waits until the app is healthy (migrations done) and exits with an error if it isn't, so cron can mail you.
+
+Run it once by hand to check it works:
+
+```bash
+./scripts/update.sh
+```
+
+Then add it to the crontab of a user that can run `docker` (`crontab -e`), for example daily at 04:30:
+
+```cron
+30 4 * * * /opt/music-releases/scripts/update.sh >> /opt/music-releases/update.log 2>&1
+```
+
+Replace `/opt/music-releases` with where you cloned the repository. `./scripts/update.sh --force` backs up and rebuilds even when there is nothing new. Optional environment variables: `UPDATE_BRANCH` (default `main`), `BACKUP_DIR` (default `backups/`), `KEEP_BACKUPS` (default `14`) and `HEALTH_TIMEOUT` in seconds (default `180`).
+
+A failed build leaves the old version running. If the new version starts but is unhealthy, look at `docker compose logs app`; to go back, check out the previous commit, run `docker compose up -d --build`, and if needed restore the backup the script made:
+
+```bash
+gunzip -c backups/<file>.sql.gz | docker compose exec -T db psql -U music music
+```
+
 ## Backups
 
 ```bash
