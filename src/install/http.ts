@@ -17,6 +17,16 @@ export function detectOrigin(req: Request): string {
   return `${proto}://${host}`;
 }
 
+/**
+ * Redirect with a relative Location header. Behind the Cloudflare tunnel req.url holds the server's
+ * internal address (e.g. 0.0.0.0:3000), so absolute URLs built from it send the browser to the wrong host;
+ * a relative path is resolved by the browser against the address it is actually on.
+ */
+export function redirectTo(path: string, status = 303, headers: Record<string, string> = {}): Response {
+  if (!path.startsWith("/") || path.startsWith("//")) throw new Error(`redirectTo expects a same-site path, got ${path}`);
+  return new Response(null, { status, headers: { ...headers, location: path } });
+}
+
 export const installSessionFrom = (req: Request) => readCookie(req.headers.get("cookie"), INSTALL_COOKIE);
 
 export async function hasInstallSession(req: Request): Promise<boolean> {
