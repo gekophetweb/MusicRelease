@@ -1,14 +1,14 @@
 "use client";
 
 import { createAuthClient } from "better-auth/react";
+import { emailOTPClient } from "better-auth/client/plugins";
 
-export const authClient = createAuthClient();
+export const authClient = createAuthClient({ plugins: [emailOTPClient()] });
 
 /**
- * "signin": sign in (or sign up) with the service — landing page, installer, reconnecting.
- * "link": add the service to the signed-in account — Settings → connect another service.
+ * Connect (or reconnect) a streaming service to the signed-in account. Spotify and TIDAL are never a way to
+ * sign in: people sign in with Google or an email code first.
  */
-export function connect(provider: "spotify" | "tidal", callbackURL = "/releases", mode: "signin" | "link" = "signin") {
-  if (mode === "link") return authClient.linkSocial({ provider, callbackURL, errorCallbackURL: `${callbackURL}?error=link` });
-  return authClient.signIn.social({ provider, callbackURL, errorCallbackURL: "/?error=connect" });
+export function connect(provider: "spotify" | "tidal", callbackURL = "/settings") {
+  return authClient.linkSocial({ provider, callbackURL, errorCallbackURL: `${callbackURL}?error=link` });
 }

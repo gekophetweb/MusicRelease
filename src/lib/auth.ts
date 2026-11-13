@@ -1,10 +1,13 @@
 import { betterAuth, type BetterAuthOptions, type BetterAuthPlugin } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
 import { APIError } from "better-auth/api";
+import { emailOTP } from "better-auth/plugins/email-otp";
 import { genericOAuth } from "better-auth/plugins/generic-oauth";
 import { deriveSecret } from "@/lib/crypto";
 import { prisma } from "@/lib/db";
-import { getSetting, getSettingsVersion, isInstalled, type OAuthAppSettings, type SiteSettings } from "@/lib/settings";
+import { getSetting, getSettingsVersion, isInstalled, type OAuthAppSettings, type SignInSettings, type SiteSettings } from "@/lib/settings";
+import { availableMethods } from "@/lib/signin";
+import { sendSignInCode } from "@/mail/signin-code";
 import { INSTALL_COOKIE, readCookie, verifyInstallSession } from "@/install/steps";
 import { onFirstSignIn } from "@/releases/first-sync";
 import { scopeNames } from "@/providers/scopes";
@@ -53,6 +56,8 @@ export interface AuthConfigInput {
   site: SiteSettings | null;
   spotify: OAuthAppSettings | null;
   tidal: OAuthAppSettings | null;
+  signin?: SignInSettings | null;
+  mailConfigured?: boolean;
 }
 
 const isOn = (s: OAuthAppSettings | null): s is OAuthAppSettings => !!s?.enabled && !!s.clientId;
@@ -72,13 +77,38 @@ async function fetchTidalUser(accessToken: string) {
     id: d.id,
     name: d.attributes?.firstName || d.attributes?.username || "TIDAL user",
     email: email || `tidal-${d.id}@${PLACEHOLDER_EMAIL_DOMAIN}`,
-    emailVerified: !!email,
+    // TIDAL is not a trusted source for email ownership: never let it link or verify an account.
+    emailVerified: false,
   };
 }
 
 export function buildAuthOptions(cfg: AuthConfigInput): BetterAuthOptions {
   const publicUrl = cfg.site?.publicUrl;
   const plugins: BetterAuthPlugin[] = [];
+  const methods = availableMethods(cfg.signin ?? null, !!cfg.mailConfigured);
+  if (methods.emailCode) {
+    plugins.push(
+      emailOTP({
+        otpLength: 6,
+        expiresIn: 600,
+        allowedAttempts: 5,
+        sendVerificationOTP: async ({ email, otp, type }, ctx) => {
+          if (type !== "sign-in") return;
+          const known = await prisma.user.findFirst({ where: { email: { equals: email, mode: "insensitive" } }, select: { id: true } });
+          if (!known) {
+            // Unknown address: only send when a new account would be allowed, so closed sites don't mail strangers.
+            try {
+              await assertSignupAllowed(ctx?.headers?.get("cookie") ?? ctx?.request?.headers.get("cookie"));
+            } catch (err) {
+              if (err instanceof SignupsClosedError) return;
+              throw err;
+            }
+          }
+          await sendSignInCode(email, otp, cfg.site?.siteName ?? "MusicReleases");
+        },
+      }) as unknown as BetterAuthPlugin,
+    );
+  }
   if (isOn(cfg.tidal)) {
     plugins.push(
       // Generic OAuth providers sign in through the standard signIn.social + /api/auth/callback/:id.
@@ -92,6 +122,9 @@ export function buildAuthOptions(cfg: AuthConfigInput): BetterAuthOptions {
             tokenUrl: TIDAL_OAUTH.tokenUrl,
             scopes: TIDAL_OAUTH.scopes,
             pkce: true,
+            // Connect-only: TIDAL never creates an account or signs someone in on its own.
+            disableSignUp: true,
+            disableImplicitSignUp: true,
             getUserInfo: async (tokens) => (tokens.accessToken ? fetchTidalUser(tokens.accessToken) : null),
           },
         ],
@@ -105,21 +138,36 @@ export function buildAuthOptions(cfg: AuthConfigInput): BetterAuthOptions {
     trustedOrigins: publicUrl ? [publicUrl] : [],
     secret: deriveSecret("better-auth"),
     database: prismaAdapter(prisma, { provider: "postgresql" }),
-    socialProviders: isOn(cfg.spotify)
-      ? {
-          spotify: {
-            clientId: cfg.spotify.clientId,
-            clientSecret: cfg.spotify.clientSecret,
-            scope: SPOTIFY_SCOPES,
-            disableDefaultScope: true,
-          },
-        }
-      : {},
+    socialProviders: {
+      ...(methods.google && cfg.signin
+        ? {
+            google: {
+              clientId: cfg.signin.google.clientId,
+              clientSecret: cfg.signin.google.clientSecret,
+              scope: ["openid", "email", "profile"],
+              disableDefaultScope: true,
+            },
+          }
+        : {}),
+      ...(isOn(cfg.spotify)
+        ? {
+            spotify: {
+              clientId: cfg.spotify.clientId,
+              clientSecret: cfg.spotify.clientSecret,
+              scope: SPOTIFY_SCOPES,
+              disableDefaultScope: true,
+              // Connect-only: linked from a signed-in session, never a way to sign in or sign up.
+              disableSignUp: true,
+              disableImplicitSignUp: true,
+            },
+          }
+        : {}),
+    },
     account: {
       encryptOAuthTokens: true,
-      // A second service is linked only from a signed-in session (linkSocial). No implicit linking by email:
-      // Spotify does not verify emails, so matching on email would let anyone take over an account.
-      accountLinking: { enabled: true, disableImplicitLinking: true, allowDifferentEmails: true },
+      // Streaming services are linked only from a signed-in session (linkSocial). Only Google may match an
+      // existing account by email: Spotify/TIDAL don't verify emails, so matching on them would allow takeovers.
+      accountLinking: { enabled: true, trustedProviders: ["google"], allowDifferentEmails: true },
     },
     user: { additionalFields: { role: { type: "string", defaultValue: "user", input: false } } },
     databaseHooks: {
@@ -170,8 +218,14 @@ const cache: { version?: string; auth?: Auth } = {};
 export async function getAuth(): Promise<Auth> {
   const version = await getSettingsVersion();
   if (cache.auth && cache.version === version) return cache.auth;
-  const [site, spotify, tidal] = await Promise.all([getSetting("site"), getSetting("spotify"), getSetting("tidal")]);
-  cache.auth = createAuth({ site, spotify, tidal });
+  const [site, spotify, tidal, signin, mail] = await Promise.all([
+    getSetting("site"),
+    getSetting("spotify"),
+    getSetting("tidal"),
+    getSetting("signin"),
+    getSetting("mail"),
+  ]);
+  cache.auth = createAuth({ site, spotify, tidal, signin, mailConfigured: !!mail });
   cache.version = version;
   return cache.auth;
 }

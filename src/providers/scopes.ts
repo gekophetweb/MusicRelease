@@ -13,7 +13,6 @@ export interface ScopeInfo {
 export const PROVIDER_SCOPES: Record<ProviderName, readonly ScopeInfo[]> = {
   spotify: [
     { scope: "user-follow-read", reason: "read the artists you follow" },
-    { scope: "user-read-email", reason: "read your account email, used as the weekly digest address" },
   ],
   tidal: [
     { scope: "user.read", reason: "read your TIDAL account (user id and, if shared, email)" },

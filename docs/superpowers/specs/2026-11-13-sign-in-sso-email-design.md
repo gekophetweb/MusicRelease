@@ -111,8 +111,10 @@ Steps become: `token → site → signin → music → mail → schedule → adm
 
 ### Existing users
 
-Existing accounts were created by Spotify/TIDAL sign-in. They keep all their data; their Spotify/TIDAL connection
-stays linked.
+Existing accounts were created by Spotify/TIDAL sign-in. They keep their followed artists, releases and settings.
+Accounts whose email was never verified (all Spotify sign-ups) lose their streaming connection the first time they
+prove the email by code: better-auth deliberately strips links that predate that proof, since they could belong to
+whoever typed that email into Spotify. Those users reconnect their service once; the Releases page prompts them.
 
 - **Users with a real email** sign in with an email code to that address (better-auth's email-code sign-in finds the
   existing user by email and marks it verified) or with Google if it's the same address (implicit link, Google is

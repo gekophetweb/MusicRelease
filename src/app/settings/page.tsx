@@ -63,7 +63,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
           {toConnect.length > 0 && (
             <div className="space-y-3">
               <p className="text-sm text-muted">Also follow artists on another service? Connect it to see those releases too.</p>
-              <ConnectButtons providers={toConnect} callbackURL="/settings" mode="link" />
+              <ConnectButtons providers={toConnect} callbackURL="/settings" />
             </div>
           )}
         </section>
