@@ -7,6 +7,7 @@ import { ReleaseCard } from "@/components/ReleaseCard";
 import { SyncNowButton } from "@/components/SyncNowButton";
 import { Button, Select } from "@/components/ui";
 import { getEnabledProviders } from "@/lib/auth";
+import { connectErrorMessage } from "@/lib/connect-errors";
 import { prisma } from "@/lib/db";
 import { requireUser } from "@/lib/session";
 import { getSetting } from "@/lib/settings";
@@ -42,7 +43,7 @@ function timeAgo(d: Date): string {
   return `${Math.round(hours / 24)} days ago`;
 }
 
-export default async function ReleasesPage({ searchParams }: { searchParams: Promise<{ since?: string; welcome?: string; artist?: string }> }) {
+export default async function ReleasesPage({ searchParams }: { searchParams: Promise<{ since?: string; welcome?: string; artist?: string; error?: string | string[] }> }) {
   const user = await requireUser();
   const params = await searchParams;
   const period = PERIODS.find((p) => p.key === params.since) ?? PERIODS[0];
@@ -74,6 +75,11 @@ export default async function ReleasesPage({ searchParams }: { searchParams: Pro
     <>
       <AppHeader siteName={site?.siteName ?? "MusicReleases"} isAdmin={isAdmin} current="releases" />
       <main className="mx-auto max-w-6xl space-y-8 px-4 py-10">
+        {connectErrorMessage(params.error) && (
+          <p role="alert" className="rounded-md border border-danger/40 px-4 py-3 text-sm text-danger">
+            {connectErrorMessage(params.error)}
+          </p>
+        )}
         {params.welcome && (
           <p role="status" className="rounded-md border border-ok/40 px-4 py-3 text-sm text-ok">
             Setup complete. Your followed artists are being synced now; refresh in a minute.

@@ -18,5 +18,5 @@ export function legacySignIn(provider: "spotify" | "tidal") {
 }
 
 export function connect(provider: "spotify" | "tidal", callbackURL = "/settings") {
-  return authClient.linkSocial({ provider, callbackURL, errorCallbackURL: `${callbackURL}?error=link` });
+  return authClient.linkSocial({ provider, callbackURL, errorCallbackURL: callbackURL });
 }
