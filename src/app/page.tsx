@@ -1,14 +1,14 @@
 import { redirect } from "next/navigation";
-import { ConnectButtons } from "@/components/ConnectButtons";
-import { getEnabledProviders } from "@/lib/auth";
+import { SignIn } from "@/components/SignIn";
 import { getSessionUser } from "@/lib/session";
 import { getSetting } from "@/lib/settings";
+import { getSignInMethods } from "@/lib/signin";
 
 export const dynamic = "force-dynamic";
 
 export default async function Home({ searchParams }: { searchParams: Promise<{ error?: string }> }) {
   if (await getSessionUser()) redirect("/releases");
-  const [providers, site, params] = await Promise.all([getEnabledProviders(), getSetting("site"), searchParams]);
+  const [methods, site, params] = await Promise.all([getSignInMethods(), getSetting("site"), searchParams]);
 
   return (
     <main className="mx-auto flex min-h-screen max-w-2xl flex-col justify-center gap-8 px-4 py-16">
@@ -21,10 +21,10 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ e
       </div>
       {params.error && (
         <p role="alert" className="rounded-lg border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-800 dark:border-red-800 dark:bg-red-950 dark:text-red-200">
-          Connecting failed. If sign-ups are closed, ask the admin to let you in.
+          Signing in failed. If sign-ups are closed, ask the admin to let you in.
         </p>
       )}
-      <ConnectButtons providers={providers} />
+      <SignIn methods={methods} callbackURL="/releases" />
     </main>
   );
 }

@@ -6,6 +6,7 @@ import { ReleaseBoard } from "@/components/ReleaseBoard";
 import { ReleaseCard } from "@/components/ReleaseCard";
 import { SyncNowButton } from "@/components/SyncNowButton";
 import { Button, Select } from "@/components/ui";
+import { getEnabledProviders } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { requireUser } from "@/lib/session";
 import { getSetting } from "@/lib/settings";
@@ -47,14 +48,16 @@ export default async function ReleasesPage({ searchParams }: { searchParams: Pro
   const period = PERIODS.find((p) => p.key === params.since) ?? PERIODS[0];
   const artistId = params.artist || undefined;
 
-  const [{ albums, singles }, site, mail, accounts, lastRun, followed] = await Promise.all([
+  const [{ albums, singles }, site, mail, accounts, lastRun, followed, services] = await Promise.all([
     getReleasesForUser(user.id, { sinceDays: period.days, artistId }),
     getSetting("site"),
     getSetting("mail"),
     prisma.account.findMany({ where: { userId: user.id }, select: { providerId: true, needsReconnect: true } }),
     prisma.syncRun.findFirst({ where: { userId: user.id, finishedAt: { not: null } }, orderBy: { startedAt: "desc" } }),
     getFollowedArtists(user.id),
+    getEnabledProviders(),
   ]);
+  const noService = accounts.length === 0;
   const follows = followed.length;
   const artist = artistId ? followed.find((a) => a.id === artistId) : undefined;
   // Same name on Spotify and TIDAL: tell the two apart in the picker.
@@ -81,7 +84,7 @@ export default async function ReleasesPage({ searchParams }: { searchParams: Pro
               Your {reconnect.map((p) => (p === "tidal" ? "TIDAL" : "Spotify")).join(" and ")} connection stopped working, so new
               releases are not being checked. Connect again to continue.
             </p>
-            <ConnectButtons providers={reconnect} />
+            <ConnectButtons providers={reconnect} callbackURL="/releases" />
           </div>
         )}
         {isAdmin && !mail && (
@@ -149,7 +152,12 @@ export default async function ReleasesPage({ searchParams }: { searchParams: Pro
           </div>
         </div>
 
-        {nothing && follows === 0 ? (
+        {noService ? (
+          <div className="max-w-prose space-y-4 rounded-md border border-line bg-surface px-5 py-5">
+            <p>Connect a music service to see releases from the artists you follow.</p>
+            <ConnectButtons providers={services} callbackURL="/releases" />
+          </div>
+        ) : nothing && follows === 0 ? (
           <p className="max-w-prose text-muted">
             No releases yet. The first check runs right after you connect; press Sync now if it has been a few minutes. If you
             follow no artists on your music service, follow a few there first.
