@@ -18,15 +18,18 @@ export async function AppHeader({
   isAdmin,
   userId,
   current,
+  adminAttention,
 }: {
   siteName: string;
   isAdmin: boolean;
   /** Shows a badge on Suggestions when the admin replied or changed a status the user hasn't seen. */
   userId?: string;
   current: Current;
+  /** Already counted by the caller (admin pages), to avoid a second query. */
+  adminAttention?: number;
 }) {
   const [openSuggestions, unread] = await Promise.all([
-    isAdmin ? countAdminAttention() : Promise.resolve(0),
+    !isAdmin ? Promise.resolve(0) : adminAttention !== undefined ? Promise.resolve(adminAttention) : countAdminAttention(),
     userId ? countUnreadForUser(userId) : Promise.resolve(0),
   ]);
   const link = (href: string, label: string, key: typeof current) => (
