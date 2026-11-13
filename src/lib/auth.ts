@@ -7,6 +7,7 @@ import { prisma } from "@/lib/db";
 import { getSetting, getSettingsVersion, isInstalled, type OAuthAppSettings, type SiteSettings } from "@/lib/settings";
 import { INSTALL_COOKIE, readCookie, verifyInstallSession } from "@/install/steps";
 import { onFirstSignIn } from "@/releases/first-sync";
+import { scopeNames } from "@/providers/scopes";
 
 export type { ProviderName } from "@/providers/types";
 import type { ProviderName } from "@/providers/types";
@@ -16,10 +17,10 @@ export const TIDAL_OAUTH = {
   authorizationUrl: "https://login.tidal.com/authorize",
   tokenUrl: "https://auth.tidal.com/v1/oauth2/token",
   userInfoUrl: "https://openapi.tidal.com/v2/users/me",
-  scopes: ["user.read", "collection.read"],
+  scopes: scopeNames("tidal"),
 };
 
-export const SPOTIFY_SCOPES = ["user-follow-read", "user-read-email"];
+export const SPOTIFY_SCOPES = scopeNames("spotify");
 
 /** Used when a provider (e.g. TIDAL) returns no email; never used for sending mail. */
 export const PLACEHOLDER_EMAIL_DOMAIN = "users.noreply.invalid";

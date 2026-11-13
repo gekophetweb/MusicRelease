@@ -5,6 +5,7 @@ import { Button, CopyField, Field, Notice, Select, TextInput, Toggle } from "@/c
 import { describeSchedule, fromDailyCron, fromWeeklyCron, toDailyCron, toWeeklyCron, WEEKDAYS } from "@/install/cron-ui";
 import type { MailSettings } from "@/mail/types";
 import type { OAuthAppSettings, ScheduleSettings, SiteSettings } from "@/lib/settings";
+import { PROVIDER_SCOPES } from "@/providers/scopes";
 
 export type Result = { ok: true } | { ok: false; errors: Record<string, string> };
 type Submit<T> = (value: T) => Promise<Result>;
@@ -132,11 +133,13 @@ const SERVICES = {
     name: "Spotify",
     dashboard: "https://developer.spotify.com/dashboard",
     steps: "Create an app, choose Web API, and paste the redirect URI below. In Development Mode, add each listener's Spotify email under User Management.",
+    permissionsHint: "Nothing to tick in the dashboard: Spotify asks each listener to approve these when they sign in.",
   },
   tidal: {
     name: "TIDAL",
     dashboard: "https://developer.tidal.com/dashboard",
-    steps: "Create an app, add the redirect URI below and enable the user and collection read scopes.",
+    steps: "Create an app and add the redirect URI below.",
+    permissionsHint: "Enable these scopes in your app's settings in the TIDAL dashboard, otherwise sign-in fails.",
   },
 } as const;
 
@@ -174,6 +177,20 @@ export function MusicForm({
                   </a>
                   . {meta.steps}
                 </p>
+                <div className="space-y-1.5">
+                  <p id={`${key}-scopes-label`} className="text-sm font-medium">
+                    Permissions (scopes)
+                  </p>
+                  <ul aria-labelledby={`${key}-scopes-label`} className="space-y-1 text-sm">
+                    {PROVIDER_SCOPES[key].map((s) => (
+                      <li key={s.scope}>
+                        <code className="rounded bg-paper px-1.5 py-0.5 font-mono text-xs">{s.scope}</code>{" "}
+                        <span className="text-muted">to {s.reason}</span>
+                      </li>
+                    ))}
+                  </ul>
+                  <p className="text-sm text-muted">{meta.permissionsHint}</p>
+                </div>
                 <Field label="Redirect URI" htmlFor={`${key}-redirect`}>
                   <CopyField id={`${key}-redirect`} value={redirectUris[key]} />
                 </Field>

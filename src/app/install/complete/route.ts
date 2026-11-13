@@ -1,4 +1,4 @@
-import { clearInstallCookie, hasInstallSession } from "@/install/http";
+import { clearInstallCookie, hasInstallSession, redirectTo } from "@/install/http";
 import { completeInstall } from "@/install/steps";
 import { getAuth } from "@/lib/auth";
 
@@ -6,14 +6,10 @@ export const dynamic = "force-dynamic";
 
 /** OAuth callbackURL of the installer's last step: the signed-in user becomes admin and setup is locked. */
 export async function GET(req: Request) {
-  const url = new URL(req.url);
-  if (!(await hasInstallSession(req))) return Response.redirect(new URL("/install", url), 303);
+  if (!(await hasInstallSession(req))) return redirectTo("/install");
   const session = await (await getAuth()).api.getSession({ headers: req.headers });
-  if (!session) return Response.redirect(new URL("/install?error=signin", url), 303);
+  if (!session) return redirectTo("/install?error=signin");
 
   await completeInstall(session.user.id);
-  return new Response(null, {
-    status: 303,
-    headers: { location: new URL("/releases?welcome=1", url).toString(), "set-cookie": clearInstallCookie },
-  });
+  return redirectTo("/releases?welcome=1", 303, { "set-cookie": clearInstallCookie });
 }
