@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { SignOutButton } from "@/components/SignOutButton";
 
-export function AppHeader({ siteName, isAdmin, current }: { siteName: string; isAdmin: boolean; current: "releases" | "settings" | "admin" }) {
+export function AppHeader({ siteName, isAdmin, current }: { siteName: string; isAdmin: boolean; current: "releases" | "artists" | "settings" | "admin" }) {
   const link = (href: string, label: string, key: typeof current) => (
     <Link
       href={href}
@@ -19,6 +19,7 @@ export function AppHeader({ siteName, isAdmin, current }: { siteName: string; is
         </Link>
         <nav className="flex items-center gap-5 text-sm">
           {link("/releases", "Releases", "releases")}
+          {link("/artists", "Artists", "artists")}
           {link("/settings", "Settings", "settings")}
           {isAdmin && link("/admin/settings", "Admin", "admin")}
           <SignOutButton />
