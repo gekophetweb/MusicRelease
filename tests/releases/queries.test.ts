@@ -73,14 +73,24 @@ test("same release from Spotify and TIDAL is shown once, linking to the service 
   expect(singles[0].artists).toEqual(["Ada"]);
 });
 
-test("isNew marks releases first seen in the last 7 days", async () => {
+test("New label only for releases from the last 2 weeks, whenever they were first seen", async () => {
   const u = await createUser();
   const a = await artist("spotify", "A");
   await follow(u.id, a.id);
-  await release("spotify", "fresh", [a.id], { firstSeenAt: new Date("2026-11-10T00:00:00Z") });
-  await release("spotify", "seen", [a.id], { title: "Seen", firstSeenAt: new Date("2026-10-01T00:00:00Z") });
+  // now = 2026-11-12: two weeks back is 2026-10-29
+  await release("spotify", "recent", [a.id], { title: "Recent", releaseDate: "2026-11-01", firstSeenAt: new Date("2026-10-01T00:00:00Z") });
+  await release("spotify", "edge", [a.id], { title: "Edge", releaseDate: "2026-10-29" });
+  await release("spotify", "older", [a.id], { title: "Older", releaseDate: "2026-10-28", firstSeenAt: new Date("2026-11-11T00:00:00Z") });
+  await release("spotify", "catalogue", [a.id], { title: "Catalogue", releaseDate: "2026-09-01", firstSeenAt: new Date("2026-11-11T00:00:00Z") });
+  await release("spotify", "monthonly", [a.id], { title: "Month only", releaseDate: "2026-11-01", datePrecision: "month" });
   const { singles } = await getReleasesForUser(u.id, { now });
-  expect(Object.fromEntries(singles.map((r) => [r.url.split("/").pop(), r.isNew]))).toEqual({ fresh: true, seen: false });
+  expect(Object.fromEntries(singles.map((r) => [r.url.split("/").pop(), r.isNew]))).toEqual({
+    recent: true,
+    edge: true,
+    older: false,
+    catalogue: false,
+    monthonly: false,
+  });
 });
 
 test("year-precision releases sort by their year and show only the year", async () => {
