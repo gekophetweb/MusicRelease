@@ -22,13 +22,13 @@ export function SuggestionForm({ page }: { page: string | null }) {
     );
   }
   return (
-    <form action={action} className="space-y-5">
+    <form key={state.attempt ?? 0} action={action} className="space-y-5">
       <input type="hidden" name="page" value={page ?? ""} />
       <fieldset className="space-y-2">
         <legend className="mb-1 text-sm font-medium">What is it?</legend>
         {KINDS.map((k, i) => (
           <label key={k.value} className="flex cursor-pointer items-start gap-3 rounded-md border border-line bg-surface px-4 py-3 has-[:checked]:border-plum">
-            <input type="radio" name="kind" value={k.value} defaultChecked={i === 0} className="mt-1 accent-plum" />
+            <input type="radio" name="kind" value={k.value} defaultChecked={state.kind ? state.kind === k.value : i === 0} className="mt-1 accent-plum" />
             <span>
               <span className="block font-medium">{k.label}</span>
               <span className="block text-sm text-muted">{k.hint}</span>
@@ -43,6 +43,7 @@ export function SuggestionForm({ page }: { page: string | null }) {
           required
           maxLength={2000}
           rows={6}
+          defaultValue={state.message}
           className="w-full rounded-md border border-line bg-surface px-3 py-2 text-ink placeholder:text-muted/70 focus:border-plum focus:outline-none"
         />
       </Field>

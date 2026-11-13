@@ -39,10 +39,15 @@ const Input = z.object({
 
 const displayName = (u: { name: string; email: string }) => u.name || (isPlaceholderEmail(u.email) ? "Someone" : u.email);
 
+/** Runs the admin notification. The server action passes Next's `after()` so the user never waits on mail. */
+export type Schedule = (task: () => Promise<void>) => unknown;
+const runNow: Schedule = (task) => task();
+
 export async function createSuggestion(
   userId: string,
   input: { kind: unknown; message: unknown; page?: unknown },
   now: Date = new Date(),
+  schedule: Schedule = runNow,
 ): Promise<{ ok: true } | { ok: false; error: string }> {
   const parsed = Input.safeParse(input);
   if (!parsed.success) return { ok: false, error: parsed.error.issues[0].message };
@@ -56,12 +61,15 @@ export async function createSuggestion(
     include: { user: { select: { name: true, email: true } } },
   });
 
-  // The database is the source of truth: a mail problem must never fail the submit.
-  try {
-    await notifyAdmins({ kind: parsed.data.kind, message: parsed.data.message, page, fromName: displayName(saved.user) });
-  } catch (err) {
-    console.warn(`[suggestions] could not email admins: ${(err as Error).message}`);
-  }
+  // The database is the source of truth: a mail problem must never fail (or slow down) the submit.
+  const fromName = displayName(saved.user);
+  await schedule(async () => {
+    try {
+      await notifyAdmins({ kind: parsed.data.kind, message: parsed.data.message, page, fromName });
+    } catch (err) {
+      console.warn(`[suggestions] could not email admins: ${(err as Error).message}`);
+    }
+  });
   return { ok: true };
 }
 

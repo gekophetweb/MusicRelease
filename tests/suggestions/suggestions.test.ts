@@ -116,3 +116,24 @@ test("setSuggestionStatus marks done and reopens only that id", async () => {
   await setSuggestionStatus(a.id, "open");
   expect(await prisma.suggestion.findUniqueOrThrow({ where: { id: a.id } })).toMatchObject({ status: "open", doneAt: null });
 });
+
+test("with a deferred scheduler the submit returns before any mail is sent", async () => {
+  await createUser({ email: "a@example.com", role: "admin" });
+  const u = await createUser();
+  const later: (() => Promise<void>)[] = [];
+  const res = await createSuggestion(u.id, { kind: "idea", message: "hi" }, new Date(), (task) => later.push(task));
+  expect(res).toEqual({ ok: true });
+  expect(await prisma.suggestion.count()).toBe(1);
+  expect(mails).toHaveLength(0);
+  await later[0]();
+  expect(mails).toHaveLength(1);
+});
+
+test("a deferred notification that fails doesn't throw", async () => {
+  await createUser({ email: "a@example.com", role: "admin" });
+  server.use(http.post("https://api.resend.com/emails", () => new HttpResponse(null, { status: 500 })));
+  const u = await createUser();
+  const later: (() => Promise<void>)[] = [];
+  await createSuggestion(u.id, { kind: "idea", message: "hi" }, new Date(), (task) => later.push(task));
+  await expect(later[0]()).resolves.toBeUndefined();
+});
