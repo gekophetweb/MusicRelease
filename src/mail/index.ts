@@ -35,6 +35,9 @@ export const MailSettingsSchema = z.discriminatedUnion("provider", [
   }),
 ]) satisfies z.ZodType<MailSettings>;
 
+/** Saved mail settings that are still valid (e.g. not for a provider that was removed). */
+export const isMailConfigured = (s: unknown): boolean => MailSettingsSchema.safeParse(s).success;
+
 export function createTransport(s: MailSettings): MailTransport {
   switch (s.provider) {
     case "smtp":

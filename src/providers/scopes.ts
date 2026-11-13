@@ -20,4 +20,7 @@ export const PROVIDER_SCOPES: Record<ProviderName, readonly ScopeInfo[]> = {
   ],
 };
 
+/** Account rows that are music services (sign-in methods like Google are accounts too). */
+export const isStreamingProvider = (providerId: string): providerId is ProviderName => providerId in PROVIDER_SCOPES;
+
 export const scopeNames = (provider: ProviderName): string[] => PROVIDER_SCOPES[provider].map((s) => s.scope);

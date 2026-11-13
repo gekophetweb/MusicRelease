@@ -117,8 +117,17 @@ prove the email by code: better-auth deliberately strips links that predate that
 whoever typed that email into Spotify. Those users reconnect their service once; the Releases page prompts them.
 
 - **Users with a real email** sign in with an email code to that address (better-auth's email-code sign-in finds the
-  existing user by email and marks it verified) or with Google if it's the same address (implicit link, Google is
-  trusted). No migration step needed.
+  existing user by email and marks it verified). Google reaches an existing account only once its email is verified
+  locally (better-auth's `requireLocalEmailVerified`), i.e. after one code sign-in; Admin → Users says so when email
+  codes are off.
+- **Upgrade default (review fix):** an installed site with no `signin` setting behaves as "email codes on", so existing
+  users can use codes right after upgrading. If no method works at all (e.g. no valid mail), the site falls back to the
+  old Spotify/TIDAL sign-in for existing accounts until the admin sets up Sign-in; in that state nobody is trusted for
+  implicit email linking.
+- **Linking (review fix):** better-auth refuses `linkSocial` for an untrusted provider with an unverified email, which
+  Spotify/TIDAL always are. They are therefore trusted (`trustedProviders: ["spotify", "tidal"]`) and `/sign-in/social`
+  with them is blocked by a `hooks.before` middleware, so the trust only ever applies to explicit linking. Google is
+  not trusted; it reports `email_verified` itself.
 - Spotify/TIDAL sign-in is removed entirely, so an account whose email came from an unverified Spotify profile can no
   longer be reached through Spotify; proving the email by code or Google becomes the only way in.
 - `fetchTidalUser` currently sets `emailVerified: !!email`; this must become `false` (TIDAL is not a trusted source).

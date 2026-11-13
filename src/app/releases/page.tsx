@@ -52,7 +52,8 @@ export default async function ReleasesPage({ searchParams }: { searchParams: Pro
     getReleasesForUser(user.id, { sinceDays: period.days, artistId }),
     getSetting("site"),
     getSetting("mail"),
-    prisma.account.findMany({ where: { userId: user.id }, select: { providerId: true, needsReconnect: true } }),
+    // Music services only: a Google sign-in is an account row too.
+    prisma.account.findMany({ where: { userId: user.id, providerId: { in: ["spotify", "tidal"] } }, select: { providerId: true, needsReconnect: true } }),
     prisma.syncRun.findFirst({ where: { userId: user.id, finishedAt: { not: null } }, orderBy: { startedAt: "desc" } }),
     getFollowedArtists(user.id),
     getEnabledProviders(),

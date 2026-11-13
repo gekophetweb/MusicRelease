@@ -64,7 +64,9 @@ People sign in to MusicReleases with **Google** or a **code sent to their email*
 
 **Email code** — needs working mail. Codes have 6 digits, expire after 10 minutes and allow 5 attempts. With sign-ups closed, addresses that don't belong to an account get no code.
 
-**Existing users** (from before sign-in moved to Google/email) sign in with a code to the email their account already has; their followed artists and settings stay. Accounts whose email was never verified must reconnect Spotify/TIDAL once after that first sign-in. Accounts without a real email (TIDAL often hides it) can't receive a code: set one for them under **Admin → Users**.
+**Upgrading an existing site:** sign-in defaults to email codes, so make sure mail works (Admin → Settings → Mail; settings for the removed Sender provider must be re-entered). Until a sign-in method works, existing users can still sign in with Spotify/TIDAL. Then review Admin → Settings → Sign-in.
+
+**Existing users** (from before sign-in moved to Google/email) sign in with a code to the email their account already has; their followed artists and settings stay. Google works for them after that first code sign-in. Accounts whose email was never verified must reconnect Spotify/TIDAL once after that first sign-in. Accounts without a real email (TIDAL often hides it) can't receive a code: set one for them under **Admin → Users**.
 
 ## Music service apps
 

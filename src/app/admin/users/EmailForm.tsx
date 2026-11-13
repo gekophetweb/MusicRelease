@@ -4,7 +4,7 @@ import { useActionState } from "react";
 import { Button, TextInput } from "@/components/ui";
 import { updateUserEmail, type EmailState } from "./actions";
 
-export function EmailForm({ userId, email, name }: { userId: string; email: string | null; name: string }) {
+export function EmailForm({ userId, email, name, emailCodes }: { userId: string; email: string | null; name: string; emailCodes: boolean }) {
   const [state, action, pending] = useActionState<EmailState, FormData>(updateUserEmail, {});
   const id = `email-${userId}`;
   return (
@@ -26,7 +26,9 @@ export function EmailForm({ userId, email, name }: { userId: string; email: stri
       )}
       {state.ok && (
         <p role="status" className="text-sm text-ok">
-          Saved. They can now sign in with a code sent to this address.
+          {emailCodes
+            ? "Saved. They can now sign in with a code sent to this address."
+            : "Saved. Email codes are off, so this address can't be used to sign in yet."}
         </p>
       )}
     </form>

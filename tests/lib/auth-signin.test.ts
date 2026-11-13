@@ -2,7 +2,7 @@ import { getAuth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { setSetting } from "@/lib/settings";
 import { resetDb } from "../helpers/db";
-import { createAccount, createUser, site } from "../helpers/factories";
+import { createAccount, createUser, site, spotifyOn } from "../helpers/factories";
 import { artist, follow } from "../helpers/releases";
 
 const sent: { to: string; code: string }[] = [];
@@ -92,4 +92,30 @@ test("a verified account keeps its Spotify connection on code sign-in", async ()
   const auth = await requestCode("fan@example.com");
   await auth.api.signInEmailOTP({ body: { email: "fan@example.com", otp: sent[0].code } });
   expect(await prisma.account.count({ where: { userId: u.id, providerId: "spotify" } })).toBe(1);
+});
+
+// ---------- streaming services are connect-only ----------
+
+async function signInSocial(provider: string) {
+  const auth = (await getAuth()) as unknown as { api: { signInSocial(a: { body: { provider: string; callbackURL: string } }): Promise<{ url?: string }> } };
+  return auth.api.signInSocial({ body: { provider, callbackURL: "/releases" } });
+}
+
+test("Spotify can't be used to sign in once a sign-in method exists", async () => {
+  await setSetting("spotify", spotifyOn);
+  await expect(signInSocial("spotify")).rejects.toThrow("Sign in with Google or an email code");
+});
+
+test("Google sign-in still starts", async () => {
+  await setSetting("signin", { google: { enabled: true, clientId: "g-id", clientSecret: "g-secret" }, emailCode: { enabled: false } });
+  const res = await signInSocial("google");
+  expect(res.url).toContain("accounts.google.com");
+});
+
+test("legacy fallback: with no working sign-in method, existing users can still sign in with Spotify", async () => {
+  await setSetting("spotify", spotifyOn);
+  await prisma.appSetting.delete({ where: { key: "signin" } });
+  await prisma.appSetting.delete({ where: { key: "mail" } });
+  const res = await signInSocial("spotify");
+  expect(res.url).toContain("accounts.spotify.com");
 });

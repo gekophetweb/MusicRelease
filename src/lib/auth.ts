@@ -1,12 +1,14 @@
 import { betterAuth, type BetterAuthOptions, type BetterAuthPlugin } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
-import { APIError } from "better-auth/api";
+import { APIError, createAuthMiddleware } from "better-auth/api";
 import { emailOTP } from "better-auth/plugins/email-otp";
 import { genericOAuth } from "better-auth/plugins/generic-oauth";
 import { deriveSecret } from "@/lib/crypto";
 import { prisma } from "@/lib/db";
 import { getSetting, getSettingsVersion, isInstalled, type OAuthAppSettings, type SignInSettings, type SiteSettings } from "@/lib/settings";
-import { availableMethods } from "@/lib/signin";
+import { availableMethods, effectiveSignIn } from "@/lib/signin";
+import { isMailConfigured } from "@/mail";
+import { isStreamingProvider } from "@/providers/scopes";
 import { sendSignInCode } from "@/mail/signin-code";
 import { INSTALL_COOKIE, readCookie, verifyInstallSession } from "@/install/steps";
 import { onFirstSignIn } from "@/releases/first-sync";
@@ -58,6 +60,8 @@ export interface AuthConfigInput {
   tidal: OAuthAppSettings | null;
   signin?: SignInSettings | null;
   mailConfigured?: boolean;
+  /** Setup is complete (enables the upgrade default for sign-in settings). */
+  installed?: boolean;
 }
 
 const isOn = (s: OAuthAppSettings | null): s is OAuthAppSettings => !!s?.enabled && !!s.clientId;
@@ -85,7 +89,11 @@ async function fetchTidalUser(accessToken: string) {
 export function buildAuthOptions(cfg: AuthConfigInput): BetterAuthOptions {
   const publicUrl = cfg.site?.publicUrl;
   const plugins: BetterAuthPlugin[] = [];
-  const methods = availableMethods(cfg.signin ?? null, !!cfg.mailConfigured);
+  const signin = effectiveSignIn(cfg.signin ?? null, !!cfg.installed);
+  const methods = availableMethods(signin, !!cfg.mailConfigured);
+  // An installed site with no working sign-in method (e.g. upgraded without mail) would lock everyone out. Until
+  // the admin sets one up, existing users may still sign in with the service they are linked to, as before.
+  const legacyFallback = !!cfg.installed && !methods.google && !methods.emailCode;
   if (methods.emailCode) {
     plugins.push(
       emailOTP({
@@ -139,11 +147,11 @@ export function buildAuthOptions(cfg: AuthConfigInput): BetterAuthOptions {
     secret: deriveSecret("better-auth"),
     database: prismaAdapter(prisma, { provider: "postgresql" }),
     socialProviders: {
-      ...(methods.google && cfg.signin
+      ...(methods.google && signin
         ? {
             google: {
-              clientId: cfg.signin.google.clientId,
-              clientSecret: cfg.signin.google.clientSecret,
+              clientId: signin.google.clientId,
+              clientSecret: signin.google.clientSecret,
               scope: ["openid", "email", "profile"],
               disableDefaultScope: true,
             },
@@ -165,9 +173,20 @@ export function buildAuthOptions(cfg: AuthConfigInput): BetterAuthOptions {
     },
     account: {
       encryptOAuthTokens: true,
-      // Streaming services are linked only from a signed-in session (linkSocial). Only Google may match an
-      // existing account by email: Spotify/TIDAL don't verify emails, so matching on them would allow takeovers.
-      accountLinking: { enabled: true, trustedProviders: ["google"], allowDifferentEmails: true },
+      // Spotify/TIDAL are linked only from a signed-in session (linkSocial); sign-in with them is blocked in
+      // hooks.before. better-auth refuses to link an untrusted provider whose email isn't verified (neither verifies
+      // emails), so they are trusted for that explicit link. Google is not trusted: it reports email_verified itself.
+      // In the legacy fallback Spotify/TIDAL sign-in is open, so nobody is trusted (no implicit email linking).
+      accountLinking: { enabled: true, trustedProviders: legacyFallback ? [] : ["spotify", "tidal"], allowDifferentEmails: true },
+    },
+    hooks: {
+      before: createAuthMiddleware(async (ctx) => {
+        if (legacyFallback || ctx.path !== "/sign-in/social") return;
+        const provider = (ctx.body as { provider?: string } | undefined)?.provider;
+        if (provider && isStreamingProvider(provider)) {
+          throw new APIError("FORBIDDEN", { message: "Sign in with Google or an email code, then connect your music service." });
+        }
+      }),
     },
     user: { additionalFields: { role: { type: "string", defaultValue: "user", input: false } } },
     databaseHooks: {
@@ -225,7 +244,8 @@ export async function getAuth(): Promise<Auth> {
     getSetting("signin"),
     getSetting("mail"),
   ]);
-  cache.auth = createAuth({ site, spotify, tidal, signin, mailConfigured: !!mail });
+  const installed = await isInstalled();
+  cache.auth = createAuth({ site, spotify, tidal, signin, mailConfigured: isMailConfigured(mail), installed });
   cache.version = version;
   return cache.auth;
 }

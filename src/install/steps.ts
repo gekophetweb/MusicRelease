@@ -12,7 +12,7 @@ import {
 } from "@/lib/settings";
 import { availableMethods, LOCKOUT_ERROR } from "@/lib/signin";
 import { verifySetupToken } from "@/lib/setup-token";
-import { MailSettingsSchema, type MailSettings } from "@/mail";
+import { isMailConfigured, MailSettingsSchema, type MailSettings } from "@/mail";
 import { MailStepSchema, MusicSchema, ScheduleSchema, SignInSchema, SiteSchema, toErrors } from "@/install/schemas";
 
 export const INSTALL_STEPS = ["token", "site", "signin", "music", "mail", "schedule", "admin"] as const;
@@ -140,7 +140,7 @@ async function applySection(section: SettingsSection, input: unknown, context: "
       const parsed = SignInSchema.safeParse(merged);
       if (!parsed.success) return { ok: false, errors: toErrors(parsed.error) };
       if (context === "admin") {
-        const methods = availableMethods(parsed.data, !!(await getSetting("mail")));
+        const methods = availableMethods(parsed.data, isMailConfigured(await getSetting("mail")));
         if (!methods.google && !methods.emailCode) return { ok: false, errors: { form: LOCKOUT_ERROR } };
       }
       await setSetting("signin", parsed.data);

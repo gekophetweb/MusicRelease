@@ -26,9 +26,14 @@ test("buildAuthOptions uses the public URL and encrypts OAuth tokens", () => {
   expect(opts.account?.encryptOAuthTokens).toBe(true);
 });
 
-test("only Google may link to an existing account by email", () => {
-  const opts = buildAuthOptions({ site, spotify: spotifyOn, tidal: tidalOn });
-  expect(opts.account?.accountLinking).toEqual({ enabled: true, trustedProviders: ["google"], allowDifferentEmails: true });
+test("streaming services are trusted for linking (sign-in with them is blocked), Google is not", () => {
+  const opts = buildAuthOptions({ site, spotify: spotifyOn, tidal: tidalOn, signin: { google: { enabled: true, clientId: "g", clientSecret: "s" }, emailCode: { enabled: false } } });
+  expect(opts.account?.accountLinking).toEqual({ enabled: true, trustedProviders: ["spotify", "tidal"], allowDifferentEmails: true });
+});
+
+test("legacy fallback: an installed site without any sign-in method keeps Spotify/TIDAL sign-in, trusting nobody", () => {
+  const opts = buildAuthOptions({ site, spotify: spotifyOn, tidal: tidalOn, installed: true });
+  expect(opts.account?.accountLinking).toEqual({ enabled: true, trustedProviders: [], allowDifferentEmails: true });
 });
 
 const signin = (google: boolean, emailCode: boolean) => ({

@@ -19,7 +19,10 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
     getUserSettings(user.id),
     getSetting("site"),
     getSetting("mail"),
-    prisma.account.findMany({ where: { userId: user.id }, select: { providerId: true, needsReconnect: true, createdAt: true } }),
+    prisma.account.findMany({
+      where: { userId: user.id, providerId: { in: ["spotify", "tidal"] } },
+      select: { providerId: true, needsReconnect: true, createdAt: true },
+    }),
     getEnabledProviders(),
   ]);
   const connected = new Set(accounts.map((a) => a.providerId));
