@@ -74,7 +74,7 @@ export default async function ArtistsPage({ searchParams }: { searchParams: Prom
 
   return (
     <>
-      <AppHeader siteName={site?.siteName ?? "MusicReleases"} isAdmin={user.role === "admin"} current="artists" />
+      <AppHeader siteName={site?.siteName ?? "MusicReleases"} isAdmin={user.role === "admin"} userId={user.id} current="artists" />
       <main className="mx-auto max-w-6xl space-y-8 px-4 py-10">
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div className="space-y-1">

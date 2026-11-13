@@ -73,7 +73,7 @@ export default async function ReleasesPage({ searchParams }: { searchParams: Pro
 
   return (
     <>
-      <AppHeader siteName={site?.siteName ?? "MusicReleases"} isAdmin={isAdmin} current="releases" />
+      <AppHeader siteName={site?.siteName ?? "MusicReleases"} isAdmin={isAdmin} userId={user.id} current="releases" />
       <main className="mx-auto max-w-6xl space-y-8 px-4 py-10">
         {connectErrorMessage(params.error) && (
           <p role="alert" className="rounded-md border border-danger/40 px-4 py-3 text-sm text-danger">

@@ -1,14 +1,16 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { after } from "next/server";
 import { requireAdmin } from "@/lib/session";
-import { setSuggestionStatus } from "@/suggestions/suggestions";
+import { setSuggestionStatus, STATUSES, type SuggestionStatus } from "@/suggestions/suggestions";
 
-export async function markSuggestion(form: FormData): Promise<void> {
+export async function changeStatus(form: FormData): Promise<void> {
   await requireAdmin();
   const id = String(form.get("id") ?? "");
-  const status = form.get("status") === "done" ? "done" : "open";
-  if (!id) return;
-  await setSuggestionStatus(id, status);
+  const status = String(form.get("status") ?? "") as SuggestionStatus;
+  if (!id || !STATUSES.includes(status)) return;
+  await setSuggestionStatus(id, status, new Date(), (task) => after(task));
   revalidatePath("/admin/suggestions");
+  revalidatePath(`/admin/suggestions/${id}`);
 }
