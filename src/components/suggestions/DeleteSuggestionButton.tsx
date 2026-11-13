@@ -1,6 +1,5 @@
 "use client";
 
-import { Button } from "@/components/ui";
 import { removeSuggestion } from "@/app/suggestions/actions";
 
 export function DeleteSuggestionButton({ id }: { id: string }) {
@@ -12,9 +11,9 @@ export function DeleteSuggestionButton({ id }: { id: string }) {
       }}
     >
       <input type="hidden" name="id" value={id} />
-      <Button type="submit" variant="quiet" className="text-danger">
+      <button type="submit" className="rounded-md px-4 py-2 text-sm font-medium text-danger underline-offset-4 hover:underline">
         Delete suggestion
-      </Button>
+      </button>
     </form>
   );
 }
