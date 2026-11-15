@@ -2,6 +2,7 @@ import { AdminChrome } from "@/components/admin/AdminChrome";
 import { listUsers, type AdminUserRow } from "@/admin/users";
 import { requireAdmin } from "@/lib/session";
 import { getSignInMethods } from "@/lib/signin";
+import { DeleteUserButton } from "./DeleteUserButton";
 import { EmailForm } from "./EmailForm";
 
 export const dynamic = "force-dynamic";
@@ -9,7 +10,7 @@ export const metadata = { title: "Users · MusicReleases" };
 
 const SERVICE = { spotify: "Spotify", tidal: "TIDAL" } as const;
 
-function UserRow({ u, emailCodes }: { u: AdminUserRow; emailCodes: boolean }) {
+function UserRow({ u, emailCodes, adminId }: { u: AdminUserRow; emailCodes: boolean; adminId: string }) {
   return (
     <li className="grid gap-3 rounded-lg border border-line bg-surface p-4 sm:grid-cols-[1fr_1.4fr] sm:items-center">
       <div className="min-w-0 space-y-0.5">
@@ -20,6 +21,7 @@ function UserRow({ u, emailCodes }: { u: AdminUserRow; emailCodes: boolean }) {
           {u.services.length ? u.services.map((s) => SERVICE[s]).join(" · ") : "No music service connected"} · joined{" "}
           <time dateTime={u.createdAt.toISOString()}>{u.createdAt.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}</time>
         </p>
+        {u.id !== adminId && <DeleteUserButton userId={u.id} name={u.name} />}
       </div>
       <EmailForm userId={u.id} email={u.email} name={u.name} emailCodes={emailCodes} />
     </li>
@@ -54,7 +56,7 @@ export default async function AdminUsersPage() {
             </h2>
             <ul className="space-y-3">
               {noEmail.map((u) => (
-                <UserRow key={u.id} u={u} emailCodes={methods.emailCode} />
+                <UserRow key={u.id} u={u} emailCodes={methods.emailCode} adminId={admin.id} />
               ))}
             </ul>
           </section>
@@ -65,7 +67,7 @@ export default async function AdminUsersPage() {
           </h2>
           <ul className="space-y-3">
             {rest.map((u) => (
-              <UserRow key={u.id} u={u} emailCodes={methods.emailCode} />
+              <UserRow key={u.id} u={u} emailCodes={methods.emailCode} adminId={admin.id} />
             ))}
           </ul>
         </section>
