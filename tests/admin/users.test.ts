@@ -127,6 +127,15 @@ describe("deleteAccount", () => {
     expect(await deleteAccount(a1.id)).toEqual({ ok: true });
   });
 
+  test("two deletes at once never throw", async () => {
+    await createUser({ role: "admin" });
+    const u = await createUser();
+    const results = await Promise.allSettled([deleteAccount(u.id), deleteAccount(u.id), deleteAccount(u.id)]);
+    expect(results.map((r) => r.status)).toEqual(["fulfilled", "fulfilled", "fulfilled"]);
+    const values = results.map((r) => (r as PromiseFulfilledResult<{ ok: boolean }>).value);
+    expect(values.filter((v) => v.ok)).toHaveLength(1);
+  });
+
   test("on an unknown id returns an error", async () => {
     expect(await deleteAccount("nope")).toEqual({ ok: false, error: "User not found" });
   });

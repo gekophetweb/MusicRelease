@@ -77,8 +77,10 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
             Delete account
           </h2>
           <p className="text-sm text-muted">
-            This removes your account, connected music services, followed artists, weekly email settings and your
-            suggestions. Replies you wrote in other threads stay, shown as [deleted user]. This can&apos;t be undone.
+            This removes your account, followed artists, weekly email settings and your suggestions, and disconnects
+            your music services here. To fully revoke access, also remove MusicReleases from your Spotify or TIDAL
+            account settings. Replies you wrote in other threads stay, shown as [deleted user]. This can&apos;t be
+            undone.
           </p>
           <DeleteAccountForm />
         </section>
