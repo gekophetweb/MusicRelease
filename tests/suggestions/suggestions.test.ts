@@ -250,3 +250,14 @@ test("a deferred notification that fails doesn't throw", async () => {
   await createSuggestion(u.id, { kind: "idea", message: "hi" }, new Date(), (task) => later.push(task));
   await expect(later[0]()).resolves.toBeUndefined();
 });
+
+test("a reply by a deleted user shows as [deleted user]", async () => {
+  const u = await createUser();
+  const a = await createUser({ role: "admin" });
+  await createSuggestion(u.id, { kind: "idea", message: "Dark mode" });
+  const s = await prisma.suggestion.findFirstOrThrow({ where: { userId: u.id } });
+  await addReply(s.id, asViewer(a), "On it");
+  await prisma.user.delete({ where: { id: a.id } });
+  const thread = await getThread(s.id, asViewer(u));
+  expect(thread?.replies[0]).toMatchObject({ message: "On it", from: "[deleted user]", fromAdmin: false, mine: false });
+});

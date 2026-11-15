@@ -6,6 +6,7 @@ import { prisma } from "@/lib/db";
 import { requireUser } from "@/lib/session";
 import { getSetting } from "@/lib/settings";
 import { getUserSettings } from "@/lib/user-settings";
+import { DeleteAccountForm } from "./DeleteAccountForm";
 import { DigestForm } from "./DigestForm";
 
 export const dynamic = "force-dynamic";
@@ -69,6 +70,19 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
               <ConnectButtons providers={toConnect} callbackURL="/settings" />
             </div>
           )}
+        </section>
+
+        <section aria-labelledby="delete-title" className="space-y-5 rounded-lg border border-danger/40 p-5">
+          <h2 id="delete-title" className="font-display text-2xl font-semibold text-danger">
+            Delete account
+          </h2>
+          <p className="text-sm text-muted">
+            This removes your account, followed artists, weekly email settings and your suggestions, and disconnects
+            your music services here. To fully revoke access, also remove MusicReleases from your Spotify or TIDAL
+            account settings. Replies you wrote in other threads stay, shown as [deleted user]. This can&apos;t be
+            undone.
+          </p>
+          <DeleteAccountForm />
         </section>
       </main>
     </>
