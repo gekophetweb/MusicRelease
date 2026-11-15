@@ -56,3 +56,34 @@ export async function setUserEmail(userId: string, input: string): Promise<{ ok:
   });
   return { ok: true };
 }
+
+export const LAST_ADMIN_ERROR = "You're the only admin. Make someone else admin first.";
+
+/**
+ * Deletes a user and everything that belongs to them (the database cascades sessions, accounts, followed artists,
+ * settings, sync runs and their suggestions; their replies elsewhere keep, author cleared). Artists nobody follows
+ * anymore, and releases left without an artist, are removed too. The last admin can't be deleted.
+ */
+export async function deleteAccount(userId: string): Promise<{ ok: true } | { ok: false; error: string }> {
+  return prisma.$transaction(
+    async (tx) => {
+      const user = await tx.user.findUnique({ where: { id: userId }, select: { role: true } });
+      if (!user) return { ok: false as const, error: "User not found" };
+      if (user.role === "admin" && (await tx.user.count({ where: { role: "admin" } })) <= 1) {
+        return { ok: false as const, error: LAST_ADMIN_ERROR };
+      }
+      // Only prune what this user followed: other orphans may belong to a sync that is still running.
+      const followed = await tx.artist.findMany({
+        where: { followers: { some: { userId } } },
+        select: { id: true, releases: { select: { releaseId: true } } },
+      });
+      const releaseIds = followed.flatMap((a) => a.releases.map((r) => r.releaseId));
+      await tx.user.delete({ where: { id: userId } });
+      await tx.artist.deleteMany({ where: { id: { in: followed.map((a) => a.id) }, followers: { none: {} } } });
+      await tx.release.deleteMany({ where: { id: { in: releaseIds }, artists: { none: {} } } });
+      return { ok: true as const };
+    },
+    // Two admins deleting each other at once must not both pass the last-admin check.
+    { isolationLevel: "Serializable" },
+  );
+}
