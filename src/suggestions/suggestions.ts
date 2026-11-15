@@ -71,6 +71,8 @@ export function safePagePath(input: unknown): string | null {
 const Message = z.string({ error: "Write a message" }).trim().min(1, "Write a message").max(MAX_MESSAGE, "Keep it under 2000 characters");
 const Input = z.object({ kind: z.enum(["idea", "problem"], { error: "Choose idea or problem" }), message: Message });
 
+/** Shown as the author of a reply whose account was deleted. */
+export const DELETED_USER = "[deleted user]";
 const displayName = (u: { name: string; email: string }) => u.name || (isPlaceholderEmail(u.email) ? "Someone" : u.email);
 const esc = (v: string) => v.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
 
@@ -228,8 +230,8 @@ export async function getThread(id: string, viewer: Viewer): Promise<{ suggestio
       id: r.id,
       message: r.message,
       createdAt: r.createdAt,
-      from: displayName(r.author),
-      fromAdmin: r.author.role === "admin",
+      from: r.author ? displayName(r.author) : DELETED_USER,
+      fromAdmin: r.author?.role === "admin",
       mine: r.authorId === viewer.id,
     })),
   };
