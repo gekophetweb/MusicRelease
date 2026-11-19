@@ -13,11 +13,13 @@ export interface ReleaseView {
   url: string;
   provider: ProviderName;
   artists: string[];
-  /** First seen by the sync within the last 7 days */
+  /** Released in the last 2 weeks (exact release day known) */
   isNew: boolean;
 }
 
 const DAY = 24 * 60 * 60 * 1000;
+/** Releases on or after the date this many days ago get the "New" label. */
+const NEW_FOR_DAYS = 14;
 
 export interface ReleaseQuery {
   /** Only releases from the last N days (by release date). Default 90; 0 = all. */
@@ -52,6 +54,12 @@ export async function getReleaseViews(userId: string, q: ReleaseQuery = {}): Pro
     prisma.account.findMany({ where: { userId }, orderBy: { createdAt: "asc" }, select: { providerId: true } }),
   ]);
 
+  // Release dates are stored as UTC midnight: compare against UTC midnight of the day two weeks ago.
+  const today = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
+  const newSince = today - NEW_FOR_DAYS * DAY;
+  const isNew = (date: Date, precision: DatePrecision) =>
+    precision === "day" && date.getTime() >= newSince && date.getTime() <= now.getTime();
+
   const preferred = accounts.map((a) => a.providerId);
   const rank = (p: string) => (preferred.indexOf(p) === -1 ? 99 : preferred.indexOf(p));
 
@@ -69,7 +77,7 @@ export async function getReleaseViews(userId: string, q: ReleaseQuery = {}): Pro
       url: r.url,
       provider: r.provider,
       artists: [...new Set(r.artists.map((a) => a.artist.name))].sort((a, b) => a.localeCompare(b)),
-      isNew: now.getTime() - r.firstSeenAt.getTime() <= 7 * DAY,
+      isNew: isNew(r.releaseDate, r.datePrecision),
     };
     const key = `${normalizeTitle(r.title)}|${r.type}|${r.releaseDate.toISOString().slice(0, 10)}`;
     const prev = byKey.get(key);
@@ -81,7 +89,7 @@ export async function getReleaseViews(userId: string, q: ReleaseQuery = {}): Pro
     byKey.set(key, {
       ...keep,
       artists: [...new Set([...prev.artists, ...view.artists])].sort((a, b) => a.localeCompare(b)),
-      isNew: prev.isNew && view.isNew,
+      isNew: prev.isNew || view.isNew,
     });
   }
   return sortReleases([...byKey.values()]);
