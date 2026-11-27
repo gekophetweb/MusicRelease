@@ -11,10 +11,13 @@ import { connectErrorMessage } from "@/lib/connect-errors";
 import { prisma } from "@/lib/db";
 import { requireUser } from "@/lib/session";
 import { getSetting } from "@/lib/settings";
+import type { ProviderName } from "@/providers/types";
 import { getReleasesForUser, type ReleaseView } from "@/releases/queries";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Releases · MusicReleases" };
+
+const SERVICE: Record<ProviderName, string> = { spotify: "Spotify", tidal: "TIDAL" };
 
 const PERIODS = [
   { key: "30", label: "30 days", days: 30 },
@@ -43,30 +46,51 @@ function timeAgo(d: Date): string {
   return `${Math.round(hours / 24)} days ago`;
 }
 
-export default async function ReleasesPage({ searchParams }: { searchParams: Promise<{ since?: string; welcome?: string; artist?: string; error?: string | string[] }> }) {
+export default async function ReleasesPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ since?: string; welcome?: string; artist?: string; service?: string; error?: string | string[] }>;
+}) {
   const user = await requireUser();
   const params = await searchParams;
   const period = PERIODS.find((p) => p.key === params.since) ?? PERIODS[0];
-  const artistId = params.artist || undefined;
 
-  const [{ albums, singles }, site, mail, accounts, lastRun, followed, services] = await Promise.all([
-    getReleasesForUser(user.id, { sinceDays: period.days, artistId }),
+  const [accounts, followed] = await Promise.all([
+    // Music services only: a Google sign-in is an account row too.
+    prisma.account.findMany({
+      where: { userId: user.id, providerId: { in: ["spotify", "tidal"] } },
+      orderBy: { createdAt: "asc" },
+      select: { providerId: true, needsReconnect: true },
+    }),
+    getFollowedArtists(user.id),
+  ]);
+  // The service filter only exists with two or more services connected.
+  const connected = [...new Set(accounts.map((a) => a.providerId as ProviderName))];
+  const service = connected.length > 1 ? connected.find((p) => p === params.service) : undefined;
+  const shownArtists = service ? followed.filter((a) => a.provider === service) : followed;
+  // An artist from the other service would only ever show an empty page: drop it.
+  const artist = params.artist ? shownArtists.find((a) => a.id === params.artist) : undefined;
+
+  const [{ albums, singles }, site, mail, lastRun, services] = await Promise.all([
+    getReleasesForUser(user.id, { sinceDays: period.days, artistId: artist?.id, provider: service }),
     getSetting("site"),
     getSetting("mail"),
-    // Music services only: a Google sign-in is an account row too.
-    prisma.account.findMany({ where: { userId: user.id, providerId: { in: ["spotify", "tidal"] } }, select: { providerId: true, needsReconnect: true } }),
     prisma.syncRun.findFirst({ where: { userId: user.id, finishedAt: { not: null } }, orderBy: { startedAt: "desc" } }),
-    getFollowedArtists(user.id),
     getEnabledProviders(),
   ]);
   const noService = accounts.length === 0;
-  const follows = followed.length;
-  const artist = artistId ? followed.find((a) => a.id === artistId) : undefined;
+  const follows = shownArtists.length;
   // Same name on Spotify and TIDAL: tell the two apart in the picker.
-  const dupNames = new Set(followed.map((a) => a.name.toLowerCase()).filter((n, i, all) => all.indexOf(n) !== i));
-  const periodHref = (key: string) => `/releases?${new URLSearchParams({ since: key, ...(artist ? { artist: artist.id } : {}) })}`;
+  const dupNames = new Set(shownArtists.map((a) => a.name.toLowerCase()).filter((n, i, all) => all.indexOf(n) !== i));
+  const href = (o: { since?: string; artist?: string; service?: string }) =>
+    `/releases?${new URLSearchParams({
+      since: o.since ?? period.key,
+      ...(o.artist ? { artist: o.artist } : {}),
+      ...(o.service ? { service: o.service } : {}),
+    })}`;
+  const onService = service ? ` on ${SERVICE[service]}` : "";
   const emptyFor = (kind: string) =>
-    `No ${artist ? `${kind} by ${artist.name}` : `new ${kind}`} in the last ${period.label.toLowerCase()}.`;
+    `No ${artist ? `${kind} by ${artist.name}` : `new ${kind}`}${onService} in the last ${period.label.toLowerCase()}.`;
   const reconnect = accounts.filter((a) => a.needsReconnect).map((a) => a.providerId as "spotify" | "tidal");
   const isAdmin = user.role === "admin";
   const nothing = albums.length + singles.length === 0;
@@ -109,25 +133,39 @@ export default async function ReleasesPage({ searchParams }: { searchParams: Pro
             <p className="text-sm text-muted">
               {artist ? (
                 <>
-                  Releases by {artist.name}.{" "}
-                  <Link href={`/releases?since=${period.key}`} className="text-plum underline underline-offset-2">
+                  Releases by {artist.name}{onService}.{" "}
+                  <Link href={href({ service })} className="text-plum underline underline-offset-2">
                     Show all artists
                   </Link>
                   .
                 </>
               ) : (
                 <>
-                  From {follows} artist{follows === 1 ? "" : "s"} you follow.
+                  From {follows} artist{follows === 1 ? "" : "s"} you follow{onService}.
                 </>
               )} {lastRun?.finishedAt ? `Last checked ${timeAgo(lastRun.finishedAt)}.` : "Not checked yet."}
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-4">
+            {connected.length > 1 && (
+              <nav aria-label="Streaming service" className="flex rounded-md border border-line bg-surface p-0.5 text-sm">
+                {[undefined, ...connected].map((p) => (
+                  <Link
+                    key={p ?? "all"}
+                    href={href({ artist: artist?.id, service: p })}
+                    aria-current={p === service ? "true" : undefined}
+                    className={`rounded px-3 py-1 ${p === service ? "bg-plum text-paper" : "text-muted hover:text-ink"}`}
+                  >
+                    {p ? SERVICE[p] : "All services"}
+                  </Link>
+                ))}
+              </nav>
+            )}
             <nav aria-label="Period" className="flex rounded-md border border-line bg-surface p-0.5 text-sm">
               {PERIODS.map((p) => (
                 <Link
                   key={p.key}
-                  href={periodHref(p.key)}
+                  href={href({ since: p.key, artist: artist?.id, service })}
                   aria-current={p.key === period.key ? "true" : undefined}
                   className={`rounded px-3 py-1 ${p.key === period.key ? "bg-plum text-paper" : "text-muted hover:text-ink"}`}
                 >
@@ -138,15 +176,16 @@ export default async function ReleasesPage({ searchParams }: { searchParams: Pro
             {follows > 0 && (
               <form action="/releases" className="flex gap-2">
                 <input type="hidden" name="since" value={period.key} />
+                {service && <input type="hidden" name="service" value={service} />}
                 <label htmlFor="artist-filter" className="sr-only">
                   Filter by artist
                 </label>
                 <Select id="artist-filter" name="artist" defaultValue={artist?.id ?? ""} className="w-52">
                   <option value="">All artists</option>
-                  {followed.map((a) => (
+                  {shownArtists.map((a) => (
                     <option key={a.id} value={a.id}>
                       {a.name}
-                      {dupNames.has(a.name.toLowerCase()) ? ` (${a.provider === "tidal" ? "TIDAL" : "Spotify"})` : ""}
+                      {dupNames.has(a.name.toLowerCase()) ? ` (${SERVICE[a.provider]})` : ""}
                     </option>
                   ))}
                 </Select>
@@ -164,7 +203,7 @@ export default async function ReleasesPage({ searchParams }: { searchParams: Pro
             <p>Connect a music service to see releases from the artists you follow.</p>
             <ConnectButtons providers={services} callbackURL="/releases" />
           </div>
-        ) : nothing && follows === 0 ? (
+        ) : nothing && followed.length === 0 ? (
           <p className="max-w-prose text-muted">
             No releases yet. The first check runs right after you connect; press Sync now if it has been a few minutes. If you
             follow no artists on your music service, follow a few there first.
