@@ -30,6 +30,8 @@ export interface ReleaseQuery {
   precision?: DatePrecision;
   /** Only releases by this artist (Artist.id); ignored unless the user follows them. */
   artistId?: string;
+  /** Only releases from this streaming service. */
+  provider?: ProviderName;
   now?: Date;
 }
 
@@ -47,6 +49,7 @@ export async function getReleaseViews(userId: string, q: ReleaseQuery = {}): Pro
         ],
         ...(from ? { releaseDate: { gte: from, lte: now } } : {}),
         ...(q.precision ? { datePrecision: q.precision } : {}),
+        ...(q.provider ? { provider: q.provider } : {}),
       },
       include: { artists: { include: { artist: { select: { name: true } } } } },
       orderBy: [{ releaseDate: "desc" }, { title: "asc" }],

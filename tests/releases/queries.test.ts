@@ -125,3 +125,29 @@ test("artistId of an artist the user does not follow returns nothing", async () 
   const { albums, singles } = await getReleasesForUser(u.id, { now, artistId: theirs.id });
   expect(albums.length + singles.length).toBe(0);
 });
+
+test("provider filter keeps only releases from that streaming service", async () => {
+  const u = await createUser();
+  await createAccount(u.id, "spotify");
+  await createAccount(u.id, "tidal");
+  const sa = await artist("spotify", "A", "Ada");
+  const ta = await artist("tidal", "101", "Ada");
+  const tb = await artist("tidal", "102", "Bo");
+  await follow(u.id, sa.id);
+  await follow(u.id, ta.id);
+  await follow(u.id, tb.id);
+  await release("spotify", "sp1", [sa.id], { title: "Night Drive", releaseDate: "2026-11-06" });
+  await release("tidal", "td1", [ta.id], { title: "Night Drive", releaseDate: "2026-11-06" });
+  await release("tidal", "td2", [tb.id], { title: "Only on TIDAL", releaseDate: "2026-11-05" });
+
+  const spotify = await getReleasesForUser(u.id, { now, provider: "spotify" });
+  expect(spotify.singles.map((r) => [r.title, r.provider])).toEqual([["Night Drive", "spotify"]]);
+
+  const tidal = await getReleasesForUser(u.id, { now, provider: "tidal" });
+  expect(tidal.singles.map((r) => [r.title, r.provider])).toEqual([
+    ["Night Drive", "tidal"],
+    ["Only on TIDAL", "tidal"],
+  ]);
+
+  expect((await getReleasesForUser(u.id, { now })).singles).toHaveLength(2);
+});
